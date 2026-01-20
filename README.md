@@ -2,18 +2,23 @@
 This Project is made for Sem 4 -> Mini Project ,It is a web-based anonymous voice communication system with latency-aware profanity moderation, built using the MERN stack and WebRTC.
 
 
-# EchoGuard
+# WaveTone
+### Latency-Aware Anonymous Voice Rooms for Web Communication
 
-EchoGuard is a web-based real-time voice communication platform that enables anonymous, context-based voice rooms with latency-aware profanity moderation.  
-The system is designed to preserve user anonymity while enforcing behavioral accountability through session-based moderation.
+WaveTone is a web-based real-time voice communication platform that enables anonymous, context-based voice rooms with latency-aware profanity moderation.  
+The system preserves user anonymity while ensuring accountable behavior through session-based moderation.
+
+---
 
 ## 🚀 Features
-- Anonymous voice rooms
+- Anonymous voice rooms with no persistent user identity
 - Real-time audio communication using WebRTC
-- Latency-aware audio buffering for profanity suppression
-- Session-based warning and kick system
-- Temporary, context-driven rooms
-- No persistent user identity storage
+- Latency-aware audio buffering for selective profanity suppression
+- Session-based warning and automatic kick system
+- Context-driven, temporary voice rooms
+- No storage of personal or voice data
+
+---
 
 ## 🛠 Tech Stack
 - **Frontend:** React.js
@@ -21,8 +26,12 @@ The system is designed to preserve user anonymity while enforcing behavioral acc
 - **Database:** MongoDB
 - **Real-Time Communication:** WebRTC, Socket.io
 
+---
+
 ## 🧠 Project Motivation
-Most voice communication platforms either ignore moderation latency or rely on aggressive muting mechanisms that disrupt conversation flow.  
-EchoGuard introduces a moderation-aware design that selectively suppresses inappropriate audio segments while maintaining a smooth real-time experience.
+Most existing voice communication platforms either ignore moderation latency or rely on aggressive muting techniques that disrupt conversation flow.  
+WaveTone introduces a moderation-aware approach that selectively suppresses inappropriate audio segments while maintaining a smooth real-time user experience.
+
+---
 
 ## 📂 Project Structure
