@@ -1,0 +1,98 @@
+=>>>Idea/Use Cases=>>>
+1 Anonymous voice rooms with no persistent user identity, / Room Management: Create, join, and leave voice chat rooms.
+2 Real-time audio communication using WebRTC
+3 Latency-aware audio buffering for selective profanity suppression
+4 Session-based warning and automatic kick system
+5 Context-driven, temporary voice rooms
+6 No storage of personal or voice data
+7 Scalable architecture to handle multiple concurrent rooms and users
+8 Rooms Can be Custom or purpose-based (study, discussion, feedback, debate), there will be an option to choose room type while creating a room.
+9 Seperate Category Based Rooms Page (General, Study, Debate, Feedback, Chill), So that users can easily find and join rooms based on their interests.
+10 Default Max Capacity of 10 users per room, with potential for future scalability based on demand.
+11 Host Can Kick Anyone & We Would Have Group Vote Kick System If 70% of active participants vote to kick a user, that user is removed from the room, this is done if the host is away from keyboard, or that specific person decides on to continously disturb other participants while speaking about something entirely else, because even though he is not using bad words but still hampering the coordination of the room about the specific topic decided.
+12 If A User Receives 5 Warnings in a Single Session, They Are Automatically Kicked Out of the Room. Warnings are issued for using profane language or disruptive behavior.
+13 Prevent Immediate Rejoin (Optional but Smart)
+14 To avoid instant rejoin abuse, you can: Use a short-lived room ban token OR apply a temporary IP cooldown (e.g., 20 minutes) , 
+15 Host Can Select This Option While Creating The Room. (Ban Participant Rejoin Allowed Or Not)
+
+
+=>>>🧠 Core Innovation/Uniqueness =>>>
+1>Audio is buffered for a very short delay (e.g., 300–500 ms), scanned, and only the profane segment is suppressed—not the entire stream. This minimizes disruption to the conversation while effectively managing profanity.
+2> Profanity Filtering (Non-AI, Safe Scope)
+
+Three feasible options (pick one)=>>>
+Keyword-based speech match (simple dictionary)
+Client-side word masking using timestamps
+Server-side segment muting (beep or silence)
+
+=>>Mute only the detected segment=>>>
+Replace with:
+Soft beep
+Low-volume noise
+
+=>>>Tech Stack=>>>
+- **Frontend:** React.js
+- **Backend:** Node.js, Express.js
+- **Database:** MongoDB
+- **Real-Time Communication:** WebRTC, Socket.io
+
+
+=>>>Technologies Used For UseCases=>>>
+MERN (MongoDB, Express, React, Node.js)
+WebRTC (for voice)
+Socket.io (signaling & room events)
+
+
+#More Info=>>>
+🛠️ MERN + WebRTC Architecture (Guide-Approved)
+Frontend (React)
+Join voice room
+Mic controls
+Room UI (participants, mute status)
+Backend (Node + Express)
+Room management
+User-session handling
+Profanity rules config
+Database (MongoDB)
+Rooms
+Join logs
+Moderation events (timestamps, not content)
+Real-Time Layer
+WebRTC → voice
+Socket.io → signaling & events
+
+
+#Main Working Flow=>>>
+1. Anonymous Session Token
+When a user joins a voice room:
+The server generates a temporary session ID
+Example: sess_9f3kL2
+This ID:
+Is NOT linked to name, email, roll number
+Exists only for that room
+Is destroyed when the user leaves
+So anonymity is preserved.
+
+
+2. Warning System (Behavior-Based)
+Each session token has:
+warningCount
+lastViolationTimestamp
+When profanity is detected:
+Warning 1 → soft warning (UI message)
+Warning 2 → audio suppression + warning
+Warning 3 → automatic removal from room
+This is rule enforcement, not identity tracking.
+
+
+3. Kick Without Identity
+When warning threshold is reached:
+Server emits kickUser(sessionId)
+WebRTC connection is closed
+User is removed from the room
+No name. No profile. No record beyond session.
+The system forgets them immediately after.
+4. Prevent Immediate Rejoin (Optional but Smart)
+To avoid instant rejoin abuse, you can:
+Use a short-lived room ban token
+OR apply a temporary IP cooldown (e.g., 20 minutes) , Host Can Select This Option While Creating The Room. (Ban Participant Rejoin Allowed Or Not)
