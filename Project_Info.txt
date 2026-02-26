@@ -96,3 +96,534 @@ The system forgets them immediately after.
 To avoid instant rejoin abuse, you can:
 Use a short-lived room ban token
 OR apply a temporary IP cooldown (e.g., 20 minutes) , Host Can Select This Option While Creating The Room. (Ban Participant Rejoin Allowed Or Not)
+
+
+
+#Info
+WaveTone is not just a “mini project.”
+It touches:
+
+• Real-time distributed systems
+• Network latency modeling
+• Media stream manipulation
+• Governance without identity
+• Abuse prevention under anonymity
+
+That’s not trivial. That’s research-adjacent engineering.
+
+When you train through that prompt, you’ll learn:
+
+WebRTC internals
+
+Event-driven architecture
+
+Session-based security
+
+Moderation system design
+
+Horizontal scaling strategies
+
+State synchronization challenges
+
+Rate-limiting & abuse mitigation
+
+System thinking under uncertainty
+
+-----------------------------------------------------------------------------------
+
+
+-------------------------------------------------------------------------------
+1️⃣ High-Level Architecture
+-------------------------------------------------------------------------------
+
+WaveTone consists of five clearly separated layers:
+
+Client (React)
+ ├── Transport Layer (WebSocket / Socket.io)
+ ├── Signaling Layer
+ ├── Media Layer (WebRTC Peer Connections)
+ ├── Moderation Layer (Client-side audio buffering + filtering)
+ └── Session Governance Layer (warnings, vote-kick, bans)
+
+Server (Node + Express)
+ ├── Signaling Server (Socket.io)
+ ├── Room Manager
+ ├── Governance Engine
+ ├── Profanity Rules Config
+ └── MongoDB (metadata only)
+
+
+
+-------------------------------------------------------------------------------
+2️⃣ Architecture Model
+-------------------------------------------------------------------------------
+
+WaveTone is a mesh-based WebRTC architecture.
+
+Since:
+
+Max 10 users per room
+
+Voice-only (low bandwidth)
+
+We do NOT need an SFU (Selective Forwarding Unit) like mediasoup.
+
+Trade-off:
+Mesh (Peer-to-peer)	SFU
+Simple	Complex
+Cheap	Infra heavy
+Good up to ~10 peers	Scales better
+More upload per client	Centralized routing
+
+For 10 users:
+Each user maintains 9 peer connections.
+
+This is acceptable for audio-only.
+
+But remember:
+
+Under 1000 users total, if distributed across rooms of 10, we have ~100 rooms.
+That’s manageable.
+
+
+-------------------------------------------------------------------------------
+3️⃣ Layer Separation (Very Important)
+-------------------------------------------------------------------------------
+
+You must think in layers.
+
+
+-------------------------------------------------------------------------------
+🔹 Transport Layer
+-------------------------------------------------------------------------------
+
+Technology: WebSocket (Socket.io)
+
+Used for:
+
+Room join
+
+Offer/answer exchange
+
+ICE candidate exchange
+
+Warnings
+
+Vote kick
+
+Join/leave events
+
+It NEVER carries audio.
+
+It ONLY carries metadata.
+
+
+-------------------------------------------------------------------------------
+🔹 Signaling Layer
+-------------------------------------------------------------------------------
+
+WebRTC does NOT define how peers find each other.
+
+So we implement signaling via Socket.io.
+
+Flow:
+
+User joins room
+
+Server notifies existing peers
+
+Peer A sends SDP offer
+
+Peer B responds with SDP answer
+
+Both exchange ICE candidates
+
+Direct peer connection established
+
+
+-------------------------------------------------------------------------------
+🔹 Media Layer
+-------------------------------------------------------------------------------
+
+This is pure WebRTC.
+
+Each peer:
+
+Captures microphone
+
+Creates RTCPeerConnection
+
+Adds audio track
+
+Sends to other peers
+
+Receives remote tracks
+
+Media flows peer-to-peer, not through server.
+
+Important:
+The server NEVER sees audio.
+
+
+-------------------------------------------------------------------------------
+🔹 Moderation Layer (Core Innovation)
+-------------------------------------------------------------------------------
+
+Working theory design:
+
+We implement a 300–500ms circular audio buffer on client.
+
+Flow:
+
+Mic Input → Buffer → Segment Analyzer → 
+If profane → mute that segment
+Else → pass to WebRTC sender
+
+We use:
+
+Web Audio API
+
+ScriptProcessorNode or AudioWorklet (preferred)
+
+Keyword-based detection
+
+Trade-offs:
+
+Approach	Pros	Cons
+Client-side filtering	Scalable	Can be bypassed
+Server-side filtering	Stronger	Breaks WebRTC model
+
+Since:
+
+No audio storage
+
+No media relay server
+
+Client-side moderation is our only viable path.
+
+But:
+Malicious users can disable JS.
+
+So governance layer must compensate.
+
+
+-------------------------------------------------------------------------------
+🔹 Session Governance Layer
+-------------------------------------------------------------------------------
+
+Handles:
+
+Warnings
+
+Auto-kick after 5 warnings
+
+Vote-kick (70%)
+
+Host ban
+
+Rejoin prevention
+
+This logic lives on server.
+
+Server is authority.
+
+Client requests.
+Server validates.
+
+Never trust client.
+
+
+-------------------------------------------------------------------------------
+4️⃣ Data Flow
+-------------------------------------------------------------------------------
+
+Let’s walk through full lifecycle.
+
+🟢 User Joining Room
+
+Client connects to Socket.io
+
+Emits joinRoom
+
+Server:
+
+Checks capacity (<=10)
+
+Creates room if needed
+
+Assigns anonymous session ID
+
+Server broadcasts newPeer
+
+Existing peers initiate WebRTC offer
+
+🎙 Audio Flow
+
+Mic captures audio
+
+AudioWorklet buffers 300–500ms
+
+Segment scanned for keywords
+
+If clean → sent
+
+If profane → segment muted/beeped
+
+WebRTC sends processed audio
+
+⚖️ Warning Flow
+
+Client detects profanity
+
+Emits warningTriggered
+
+Server increments session warning count
+
+If warnings >= 5:
+
+Force disconnect
+
+Broadcast removal
+
+🗳 Vote Kick Flow
+
+User initiates vote
+
+Server stores vote state
+
+Other users vote
+
+If >= 70%:
+
+Remove target
+
+Log timestamp
+
+Concurrency risk:
+Two votes at same time.
+We must lock vote state per room.
+
+-------------------------------------------------------------------------------
+5️⃣ Session Lifecycle
+-------------------------------------------------------------------------------
+
+Socket connect
+   ↓
+Join room
+   ↓
+WebRTC negotiation
+   ↓
+Active communication
+   ↓
+Warnings accumulate
+   ↓
+Kick / Leave / Disconnect
+   ↓
+Room cleanup if empty
+-------------------------------------------------------------------------------
+6️⃣ Room Lifecycle
+-------------------------------------------------------------------------------
+
+Room created
+Users join (<=10)
+Room active
+All users leave
+Room destroyed
+
+MongoDB stores:
+
+Room ID
+
+Category
+
+Created timestamp
+
+Moderation log timestamps
+
+Ban list (temporary)
+
+NO AUDIO DATA.
+
+-------------------------------------------------------------------------------
+7️⃣ WebRTC Deep Explanation (You Must Understand This)
+-------------------------------------------------------------------------------
+
+WebRTC connection establishment:
+
+Step 1: ICE
+
+ICE = Interactive Connectivity Establishment
+
+It tries multiple network paths.
+
+Step 2: STUN
+
+STUN server tells client:
+“What is your public IP?”
+
+Used for NAT traversal.
+
+Example STUN:
+
+stun:stun.l.google.com:19302
+Step 3: Offer / Answer
+
+Peer A:
+
+Creates RTCPeerConnection
+
+Creates SDP offer
+
+Sends via signaling
+
+Peer B:
+
+Sets remote description
+
+Creates answer
+
+Sends back
+
+Step 4: ICE Candidates
+
+Each peer:
+
+Discovers possible connection routes
+
+Sends candidates via signaling
+
+Once matching route found:
+Peer-to-peer media starts.
+
+Important:
+If both peers are behind symmetric NAT,
+STUN fails → need TURN.
+
+TURN relays traffic.
+We may need it in production.
+
+For now:
+STUN only.
+
+-------------------------------------------------------------------------------
+8️⃣ Behavior Under 1000 Users
+-------------------------------------------------------------------------------
+
+If:
+
+10 users per room
+
+100 rooms
+
+Server load:
+
+Socket connections = 1000
+Mongo writes = minimal
+Media = peer-to-peer (no load)
+
+Critical load point:
+Signaling bursts during joins.
+
+Mitigation:
+
+Use Redis adapter if scaling across instances
+
+Horizontal scale Node
+
+-------------------------------------------------------------------------------
+9️⃣ Concurrency Risks
+-------------------------------------------------------------------------------
+
+1️⃣ Double Vote Race Condition
+
+Two votes processed simultaneously.
+
+Solution:
+Atomic vote count update.
+
+2️⃣ Warning Spam
+
+User spams warning event.
+
+Solution:
+Server validates time delta.
+
+3️⃣ Rapid Join/Leave
+
+Flooding rooms.
+
+Solution:
+Rate limit per IP.
+
+4️⃣ Peer Connection Storm
+
+If 10 users join simultaneously,
+Each makes 9 connections.
+
+That’s 90 negotiations.
+
+Mitigation:
+Stagger connection creation.
+
+-------------------------------------------------------------------------------
+🔟 Abuse Scenarios
+-------------------------------------------------------------------------------
+
+Abuse	Mitigation
+Disable profanity filter	Governance layer
+Spam join rooms	Rate limit
+Vote abuse	Cooldown
+Rejoin after kick	Session ban list
+Socket flooding	IP throttling
+-------------------------------------------------------------------------------
+1️⃣1️⃣ Latency Engineering
+-------------------------------------------------------------------------------
+
+We add 300–500ms buffer.
+
+Trade-off:
+
+Buffer	Effect
+100ms	Too small for detection
+300ms	Balanced
+800ms	Noticeable lag
+
+Target:
+< 600ms total latency including network.
+
+Voice acceptable up to 700ms.
+
+-------------------------------------------------------------------------------
+1️⃣2️⃣ Failure Scenarios
+-------------------------------------------------------------------------------
+
+STUN fails
+
+→ Connection fails silently
+
+Peer disconnects mid-session
+
+→ Remove tracks
+→ Cleanup peer connections
+
+Server crash
+
+→ All rooms lost (unless persisted)
+
+We must design:
+Stateless signaling server if possible.
+
+-------------------------------------------------------------------------------
+1️⃣3️⃣ Final System Diagram
+-------------------------------------------------------------------------------
+
+[React Client]
+   ├── Mic → AudioWorklet → Filter → RTCPeerConnection
+   ├── Socket.io Client
+   └── UI
+
+[Node Server]
+   ├── Express API
+   ├── Socket.io Signaling
+   ├── Governance Engine
+   └── MongoDB (metadata)
