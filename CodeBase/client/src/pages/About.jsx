@@ -42,13 +42,25 @@ function About() {
             { step: '02', title: 'Get an Alias', desc: 'You\'re assigned a random anonymous name.', icon: '🎭' },
             { step: '03', title: 'Start Talking', desc: 'Connect via real-time WebRTC audio.', icon: '🎤' },
             { step: '04', title: 'Session Ends', desc: 'When you leave, everything disappears.', icon: '✨' },
-          ].map((item, idx) => (
-            <div key={item.step} className="about-step-item" style={{ padding: '1.5rem', borderRadius: '12px', transition: 'all 0.3s ease' }}>
+          ].map((item, idx, arr) => (
+            <div key={item.step} className="about-step-item" style={{ padding: '1.5rem', borderRadius: '12px', transition: 'all 0.3s ease', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', minHeight: '260px' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '0.8rem' }}>{item.icon}</div>
               <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--speaking)', marginBottom: '0.6rem', opacity: 0.5 }}>{item.step}</div>
               <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '1rem', marginBottom: '0.4rem' }}>{item.title}</div>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', lineHeight: 1.5 }}>{item.desc}</div>
-              {idx < 3 && <div style={{ marginTop: '1rem', fontSize: '1.5rem', color: 'var(--speaking)', opacity: 0.3 }}>↓</div>}
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', lineHeight: 1.5, marginBottom: 'auto' }}>{item.desc}</div>
+              <div style={{ height: '2.5rem', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', width: '100%' }}>
+                {idx < arr.length - 1
+                  ? <span style={{ fontSize: '2.2rem', color: 'var(--speaking)', opacity: 0.3, lineHeight: 1 }}>↓</span>
+                  : (
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="40" height="40" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+                        <path d="M8 18h20" stroke="var(--speaking)" strokeWidth="5" strokeLinecap="round" opacity="0.3"/>
+                        <path d="M22 12l6 6-6 6" stroke="var(--speaking)" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" opacity="0.3"/>
+                      </svg>
+                    </span>
+                  )
+                }
+              </div>
             </div>
           ))}
         </div>

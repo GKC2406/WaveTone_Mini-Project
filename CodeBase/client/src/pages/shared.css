@@ -459,7 +459,7 @@
   background: rgba(56, 189, 248, 0.12);
   border-color: rgba(56, 189, 248, 0.3);
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(56, 189, 248, 0.15);
+  box-shadow: 0 4px 24px 0 rgba(56, 189, 248, 0.13), 0 1.5px 6px 0 rgba(56, 189, 248, 0.09);
 }
 .about-step-item:hover::before {
   opacity: 1;
@@ -469,6 +469,7 @@
 [data-theme="light"] .about-step-item {
   background: linear-gradient(135deg, #f0f6fc 0%, #ffffff 100%);
   border: 1.5px solid rgba(10, 46, 80, 0.12);
+  box-shadow: 0 4px 28px 0 rgba(10, 46, 80, 0.13), 0 2px 8px 0 rgba(10, 46, 80, 0.10);
 }
 [data-theme="light"] .about-step-item::before {
   background: linear-gradient(135deg, rgba(10, 46, 80, 0.05) 0%, transparent 100%);
@@ -476,5 +477,5 @@
 [data-theme="light"] .about-step-item:hover {
   background: linear-gradient(135deg, #e6f0f9 0%, #f9fbfd 100%);
   border-color: rgba(10, 46, 80, 0.25);
-  box-shadow: 0 8px 24px rgba(10, 46, 80, 0.12);
+  box-shadow: 0 8px 36px 0 rgba(10, 46, 80, 0.18), 0 3px 12px 0 rgba(10, 46, 80, 0.13);
 }
