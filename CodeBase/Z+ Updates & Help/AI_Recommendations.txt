@@ -1,0 +1,243 @@
+=>>> AI & Feature Recommendations for WaveTone =>>>
+Generated from codebase analysis — features worth implementing
+
+
+===============================================================================
+PRIORITY 1 — IMPLEMENT NOW (Core Innovation)
+===============================================================================
+
+1> Audio Buffer Pipeline (400ms Ring Buffer + Profanity Gate)
+   Status: IMPLEMENTED — Core innovation of WaveTone
+
+   What it does:
+   > Mic audio passes through an AudioWorklet with a 400ms ring buffer
+   > Web Speech API runs in parallel, converting speech to text in real-time
+   > Text is checked against profanity word list
+   > If profane → worklet gate closes → segment is muted/silenced for 500ms
+   > If clean → audio passes through to WebRTC peers
+
+   Architecture:
+   Mic → AudioContext → AudioWorkletNode (400ms buffer, gate control)
+        → MediaStreamAudioDestinationNode → processedStream → WebRTC
+
+   Mic → SpeechRecognition (parallel, interimResults: true)
+        → onresult → check profanity → if detected → postMessage to worklet → gate closes
+
+   Files created:
+   > client/public/profanity-worklet.js — AudioWorklet processor (400ms ring buffer + gate)
+   > client/src/audio/AudioPipeline.js — Orchestrator (AudioContext + SpeechRecognition + worklet wiring)
+   > client/src/audio/profanityWordList.js — Client-side word list + leet-speak regex
+
+   Files modified:
+   > client/src/pages/VoiceRoom.jsx — processedStream replaces raw stream in WebRTC addTrack
+   > server/index.js — profanity-warning event handler + socketWarnings Map
+
+   Latency budget:
+   > Buffer delay: 400ms
+   > SpeechRecognition interim results: ~200-300ms
+   > Total target: <600ms (voice acceptable up to 700ms)
+
+   Fallback:
+   > If AudioWorklet unavailable (old browser) → raw stream passes through
+   > If SpeechRecognition unavailable (Firefox) → no detection, audio unfiltered
+   > Warning system still works as safety net in both cases
+
+   Academic framing:
+   > "Latency-aware audio buffering with selective profanity suppression"
+   > "Client-side moderation preserving WebRTC peer-to-peer privacy model"
+
+
+2> Warning System (3 Warnings → Auto-Kick)
+   Status: IMPLEMENTED
+
+   What it does:
+   > Server tracks warning count per socket session
+   > When profanity detected (from buffer pipeline), client emits profanity-warning
+   > Server rate-limits (2s between warnings to prevent spam)
+   > Server emits warning-issued back with count
+   > At 3 warnings → auto-kick + IP ban from room
+
+   Server changes:
+   > New Map: socketWarnings → Map<socketId, { count, lastTimestamp }>
+   > New event: profanity-warning (client → server)
+   > New event: warning-issued (server → client)
+
+   Client changes:
+   > Warning toast in VoiceRoom ("Warning 2/3 — Watch your language!")
+   > Kicked handler shows reason message
+
+   Academic framing:
+   > "Rule-based governance without identity — session-scoped behavioral enforcement"
+
+
+3> Vote-Kick System (70% Threshold)
+   Status: IMPLEMENTED
+
+   What it does:
+   > Any user can initiate a vote to kick another participant
+   > Server broadcasts vote to all participants (except target)
+   > Users cast Remove/Keep votes
+   > If ≥70% vote Remove → target is kicked + IP banned
+   > 30-second timeout → vote fails if threshold not reached
+   > One active vote per room at a time
+
+   Server changes:
+   > New Map: activeVotes → Map<roomId, { target, votes: Set, timeout }>
+   > Events: vote-kick-start, vote-kick-cast, vote-kick-active, vote-kick-update, vote-kick-ended
+
+   Client changes:
+   > Vote banner UI with progress bar, countdown timer, Remove/Keep buttons
+   > "Vote Kick" button alongside existing "Kick" in participant manage view
+
+   Why it matters:
+   > Governance without identity — democratic moderation in anonymous rooms
+   > Handles the case where host is AFK but a user is disruptive
+   > 70% threshold prevents abuse by small groups
+
+
+===============================================================================
+PRIORITY 2 — IMPLEMENT NEXT (Low Effort, High Value)
+===============================================================================
+
+4> Speaking Time Tracker + Balance Insight
+   Status: EASY — infrastructure already exists
+
+   What it does:
+   > AnalyserNode already detects speaking state per user (every 100ms)
+   > Just accumulate speakingTime counter per participant
+   > Show on PostRoomSummary: "Echo spoke for 4 min, Wave spoke for 2 min"
+   > Insight: "Conversation was balanced" or "Dominated by 2 speakers"
+
+   Why it's valuable:
+   > Zero additional infrastructure — just a counter on existing detection
+   > Maps directly to AI Option B (Disruptive Behavior Detection) from docs
+   > Impressive on PostRoomSummary page
+
+   Academic framing:
+   > "Audio metadata analysis for participation balance insight"
+
+
+5> Room Timer with Auto-Close
+   Status: EASY — Room model already has duration field
+
+   What it does:
+   > Room schema has duration: 30 (minutes) — currently unused
+   > Show countdown timer in VoiceRoom header
+   > When timer hits 0 → server emits room-expired → all users redirected to summary
+   > Prevents zombie rooms, adds structure
+
+   Changes:
+   > server/index.js: setTimeout on room creation, emit room-expired
+   > VoiceRoom.jsx: countdown display, listen for room-expired
+
+
+6> Session Token (Anonymous ID)
+   Status: EASY
+
+   What it does:
+   > Generate sess_xxxxx temporary ID per user per room
+   > Not linked to name, email, or any personal data
+   > Used for warning tracking, moderation logs
+   > Destroyed when user leaves
+
+   Changes:
+   > server/index.js: generate on join-room, store in Map
+   > Replaces current anon_timestamp pattern
+
+
+===============================================================================
+PRIORITY 3 — NICE TO HAVE (Polish / Future)
+===============================================================================
+
+7> AI Speech-to-Text Profanity Classification (Option A from docs)
+   Status: FUTURE — upgrade over keyword matching
+
+   What it does:
+   > Replace regex-based profanity check with ML toxicity classifier
+   > TensorFlow.js @tensorflow-models/toxicity runs in-browser
+   > OR send text chunks to Claude Haiku API (~$0.001/call, ~200ms response)
+   > Catches contextual toxicity that keyword lists miss
+
+   Verdict from docs: "Optional advanced feature, not part of MVP"
+
+
+8> AI Disruptive Behavior Detection (Option B from docs — best for viva)
+   Status: FUTURE — most academically impressive
+
+   What it does:
+   > Analyze HOW users behave, not WHAT they say
+   > Inputs (all from existing AnalyserNode data):
+     - Speaking frequency
+     - Interruption count (spoke within 500ms of someone stopping)
+     - Volume spikes (amplitude > 2x room average)
+     - Monologue length (continuous speaking > 60s)
+   > Flag disruptive patterns → feed into warning system
+
+   Why it's strong:
+   > Privacy-preserving — no speech content analyzed
+   > No speech recognition required
+   > Academically unique and defensible
+
+   Verdict from docs: "Strong and defensible AI add-on"
+
+
+9> Adaptive Moderation Thresholds (Option C from docs)
+   Status: FUTURE
+
+   What it does:
+   > Study rooms → stricter profanity threshold (mute at lower confidence)
+   > Debate rooms → relaxed threshold
+   > Chill rooms → minimal moderation
+   > Category-to-threshold lookup, or learned model over time
+
+   Verdict from docs: "Optional polish feature"
+
+
+10> AI Conversation Summary (Post-Room)
+    Status: FUTURE — requires API key + cost
+
+    What it does:
+    > During room, SpeechRecognition produces transcripts
+    > Store key phrases (not full audio) temporarily
+    > On room close, send to Claude Haiku API for summary
+    > Display on PostRoomSummary page
+    > No audio permanently stored — only abstracted discussion points
+
+    Recommended model: Claude Haiku 4.5 (~$0.001/summary)
+
+
+11> Conversation Phase Control
+    Status: FUTURE — unique system design feature
+
+    What it does:
+    > Rooms divided into phases: Intro (2 min) → Open Discussion → Summary (1 min)
+    > Different rules per phase (e.g., no kicks during Intro)
+    > Server manages phase transitions with timers
+    > No AI required — pure system design innovation
+
+
+===============================================================================
+WHAT NOT TO IMPLEMENT
+===============================================================================
+
+> Full audio recording/storage — violates WaveTone's core privacy promise
+> User accounts/authentication — contradicts anonymous design
+> Text chat — scope creep, WaveTone is voice-only by design
+> Video — bandwidth explosion, breaks mesh architecture at 10 users
+> SFU (mediasoup) — overkill for ≤10 users, mesh is sufficient
+
+
+===============================================================================
+AI IMPLEMENTATION NOTES
+===============================================================================
+
+Best Claude model for API integration: Haiku 4.5
+> Fastest response (~200ms), cheapest (~$0.001/call)
+> Sufficient for toxicity classification and short summaries
+> API: POST https://api.anthropic.com/v1/messages
+
+Academic framing rules (from project docs):
+> NEVER say: "AI controls the chat" or "AI monitors users"
+> ALWAYS say: "AI assists moderation decisions"
+> ALWAYS say: "AI augments user-driven governance"
+> ALWAYS say: "AI operates on metadata or temporary buffers"

@@ -1,4 +1,5 @@
 import Room from '../models/Room.js';
+import { containsProfanity } from '../utils/profanityFilter.js';
 
 export const getRooms = async (req, res) => {
   try {
@@ -23,6 +24,9 @@ export const getRooms = async (req, res) => {
 export const createRoom = async (req, res) => {
   try {
     const { topic, category, maxUsers, isPrivate } = req.body;
+    if (containsProfanity(topic) || containsProfanity(category)) {
+      return res.status(400).json({ error: 'Room topic or category contains inappropriate language.' });
+    }
     const room = new Room({ topic, category, maxUsers, isPrivate });
     await room.save();
     res.status(201).json(room);

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import './shared.css';
 import { connectSocket } from '../services/socket';
+import { AudioPipeline } from '../audio/AudioPipeline';
 
 const ICE_SERVERS = {
   iceServers: [
@@ -19,18 +20,27 @@ function VoiceRoom() {
   const roomData = location.state?.room || {};
   const maxUsers = roomData.maxUsers || 10;
 
-  const [participants, setParticipants] = useState([]);   // other users
+  const [participants, setParticipants] = useState([]);
   const [muted, setMuted] = useState(false);
   const [showManage, setShowManage] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [speakingStates, setSpeakingStates] = useState({});
   const [selfSpeaking, setSelfSpeaking] = useState(false);
   const [micError, setMicError] = useState(null);
+  const [warningCount, setWarningCount] = useState(0);
+  const [warningToast, setWarningToast] = useState(null);
+
+  // Vote-kick state
+  const [voteKick, setVoteKick] = useState(null);
+  const [voteKickTimer, setVoteKickTimer] = useState(30);
+  const [hasVoted, setHasVoted] = useState(false);
 
   const socketRef = useRef(null);
   const localStreamRef = useRef(null);
+  const processedStreamRef = useRef(null);
+  const audioPipelineRef = useRef(null);
   const peerConnectionsRef = useRef({});
-  const analyserIntervalsRef = useRef({});  // id → { intervalId, audioCtx }
+  const analyserIntervalsRef = useRef({});
   const joinTimeRef = useRef(Date.now());
 
   // --- Volume detection ---
@@ -55,9 +65,11 @@ function VoiceRoom() {
   const createPeerConnection = useCallback((targetSocketId) => {
     const pc = new RTCPeerConnection(ICE_SERVERS);
 
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track =>
-        pc.addTrack(track, localStreamRef.current)
+    // Use processed stream (through profanity gate) or raw stream as fallback
+    const streamToSend = processedStreamRef.current || localStreamRef.current;
+    if (streamToSend) {
+      streamToSend.getTracks().forEach(track =>
+        pc.addTrack(track, streamToSend)
       );
     }
 
@@ -102,7 +114,19 @@ function VoiceRoom() {
     setSpeakingStates(prev => { const s = { ...prev }; delete s[socketId]; return s; });
   };
 
-  // --- Main effect: mic + socket + signaling ---
+  // --- Vote-kick timer countdown ---
+  useEffect(() => {
+    if (!voteKick) return;
+    const interval = setInterval(() => {
+      setVoteKickTimer(prev => {
+        if (prev <= 1) { clearInterval(interval); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [voteKick]);
+
+  // --- Main effect: mic + pipeline + socket + signaling ---
   useEffect(() => {
     let active = true;
 
@@ -113,6 +137,27 @@ function VoiceRoom() {
         if (!active) { stream.getTracks().forEach(t => t.stop()); return; }
         localStreamRef.current = stream;
         setupVolumeDetection('self', stream, setSelfSpeaking);
+
+        // Set up audio profanity pipeline if room has filter enabled
+        const filterEnabled = roomData.profanityFilter !== false;
+        if (filterEnabled) {
+          const pipeline = new AudioPipeline({
+            rawStream: stream,
+            onProfanityDetected: () => {
+              socketRef.current?.emit('profanity-warning', { roomId });
+            },
+            onPipelineReady: (processed) => {
+              processedStreamRef.current = processed;
+            },
+            onError: () => {
+              processedStreamRef.current = stream;
+            },
+          });
+          audioPipelineRef.current = pipeline;
+          await pipeline.init();
+        } else {
+          processedStreamRef.current = stream;
+        }
       } catch {
         setMicError('Microphone access denied — you can still listen.');
       }
@@ -122,13 +167,19 @@ function VoiceRoom() {
       socketRef.current = socket;
       socket.emit('join-room', { roomId, alias });
 
-      // Current room users (sent immediately on join)
+      // Join denied (banned IP)
+      socket.on('join-denied', ({ reason }) => {
+        if (!active) return;
+        navigate('/browse', { state: { error: reason } });
+      });
+
+      // Current room users
       socket.on('room-users', (users) => {
         if (!active) return;
         setParticipants(users);
       });
 
-      // New user joined → we initiate the offer as the existing user
+      // New user joined → initiate offer
       socket.on('user-joined', async ({ socketId, alias: newAlias }) => {
         if (!active) return;
         setParticipants(prev => [...prev, { socketId, alias: newAlias }]);
@@ -140,7 +191,7 @@ function VoiceRoom() {
         } catch { /* negotiation error */ }
       });
 
-      // Received an offer from a peer → answer it
+      // Received offer → answer it
       socket.on('offer', async ({ offer, fromSocketId }) => {
         if (!active) return;
         const pc = createPeerConnection(fromSocketId);
@@ -152,7 +203,6 @@ function VoiceRoom() {
         } catch { /* negotiation error */ }
       });
 
-      // Received an answer to our offer
       socket.on('answer', async ({ answer, fromSocketId }) => {
         const pc = peerConnectionsRef.current[fromSocketId];
         if (pc) {
@@ -160,7 +210,6 @@ function VoiceRoom() {
         }
       });
 
-      // ICE candidate from a peer
       socket.on('ice-candidate', async ({ candidate, fromSocketId }) => {
         const pc = peerConnectionsRef.current[fromSocketId];
         if (pc) {
@@ -168,16 +217,48 @@ function VoiceRoom() {
         }
       });
 
-      // A user left
       socket.on('user-left', ({ socketId }) => {
         if (!active) return;
         setParticipants(prev => prev.filter(p => p.socketId !== socketId));
         cleanupPeer(socketId);
       });
 
-      // We got kicked
-      socket.on('kicked', () => {
-        navigate('/');
+      // Kicked (with reason)
+      socket.on('kicked', ({ reason } = {}) => {
+        navigate('/', { state: { kickReason: reason || 'You were removed from the room.' } });
+      });
+
+      // Profanity warning issued
+      socket.on('warning-issued', ({ count, maxWarnings }) => {
+        if (!active) return;
+        setWarningCount(count);
+        setWarningToast(`Profanity warning ${count}/${maxWarnings}. Watch your language!`);
+        setTimeout(() => setWarningToast(null), 4000);
+      });
+
+      // Vote-kick events
+      socket.on('vote-kick-active', (data) => {
+        if (!active) return;
+        setVoteKick(data);
+        setVoteKickTimer(data.timeoutSeconds);
+        setHasVoted(data.initiatorAlias === alias);
+      });
+
+      socket.on('vote-kick-update', ({ currentVotes, requiredVotes, totalVoters }) => {
+        if (!active) return;
+        setVoteKick(prev => prev ? { ...prev, currentVotes, requiredVotes, totalVoters } : null);
+      });
+
+      socket.on('vote-kick-ended', () => {
+        if (!active) return;
+        setVoteKick(null);
+        setHasVoted(false);
+      });
+
+      socket.on('vote-kick-error', ({ message }) => {
+        if (!active) return;
+        setWarningToast(message);
+        setTimeout(() => setWarningToast(null), 3000);
       });
     };
 
@@ -185,17 +266,15 @@ function VoiceRoom() {
 
     return () => {
       active = false;
-      // Stop local audio
+      audioPipelineRef.current?.destroy();
       localStreamRef.current?.getTracks().forEach(t => t.stop());
-      // Close all peer connections
       Object.values(peerConnectionsRef.current).forEach(pc => pc.close());
-      // Clear all volume intervals and AudioContexts
       Object.values(analyserIntervalsRef.current).forEach(entry => {
         clearInterval(entry.intervalId);
         entry.audioCtx.close().catch(() => {});
       });
-      // Leave socket room
       socketRef.current?.emit('leave-room', { roomId });
+      socketRef.current?.off('join-denied');
       socketRef.current?.off('room-users');
       socketRef.current?.off('user-joined');
       socketRef.current?.off('offer');
@@ -203,6 +282,11 @@ function VoiceRoom() {
       socketRef.current?.off('ice-candidate');
       socketRef.current?.off('user-left');
       socketRef.current?.off('kicked');
+      socketRef.current?.off('warning-issued');
+      socketRef.current?.off('vote-kick-active');
+      socketRef.current?.off('vote-kick-update');
+      socketRef.current?.off('vote-kick-ended');
+      socketRef.current?.off('vote-kick-error');
     };
   }, [roomId, alias, createPeerConnection, navigate]);
 
@@ -235,12 +319,21 @@ function VoiceRoom() {
     cleanupPeer(socketId);
   };
 
-  // Build participant list including self
+  const handleStartVoteKick = (targetSocketId) => {
+    socketRef.current?.emit('vote-kick-start', { roomId, targetSocketId });
+  };
+
+  const handleCastVote = (vote) => {
+    socketRef.current?.emit('vote-kick-cast', { roomId, vote });
+    setHasVoted(true);
+  };
+
   const self = { socketId: 'self', alias, isSelf: true };
   const allParticipants = [self, ...participants];
 
   return (
     <section className="page-section">
+      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div>
           <h2 className="page-title" style={{ marginBottom: '0.2rem' }}>
@@ -249,6 +342,11 @@ function VoiceRoom() {
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
             <span className="badge badge-live"><span className="live-dot" /> Live</span>
             <span className="badge badge-count">{roomData.category || 'General'}</span>
+            {warningCount > 0 && (
+              <span className="badge" style={{ background: 'rgba(248,113,113,0.15)', color: 'var(--warning)' }}>
+                {warningCount}/3 warnings
+              </span>
+            )}
           </div>
         </div>
         <button
@@ -265,9 +363,57 @@ function VoiceRoom() {
         </button>
       </div>
 
+      {/* Mic error */}
       {micError && (
         <div style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: '8px', padding: '0.6rem 1rem', marginBottom: '1rem', color: 'var(--warning)', fontSize: '0.82rem' }}>
           {micError}
+        </div>
+      )}
+
+      {/* Warning toast */}
+      {warningToast && (
+        <div style={{ background: 'rgba(248,113,113,0.1)', border: '1.5px solid var(--warning)', borderRadius: '8px', padding: '0.6rem 1rem', marginBottom: '1rem', color: 'var(--warning)', fontSize: '0.85rem', fontWeight: 600, animation: 'fadeIn 0.3s ease' }}>
+          {warningToast}
+        </div>
+      )}
+
+      {/* Vote-kick banner */}
+      {voteKick && (
+        <div className="card" style={{ marginBottom: '1.2rem', border: '1.5px solid var(--warning)', background: 'rgba(248,113,113,0.05)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
+            <h4 style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.95rem' }}>
+              Vote Kick: {voteKick.targetAlias}
+            </h4>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>
+              {voteKickTimer}s
+            </span>
+          </div>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.8rem' }}>
+            {voteKick.initiatorAlias} wants to remove {voteKick.targetAlias}. {voteKick.currentVotes}/{voteKick.requiredVotes} votes needed.
+          </p>
+          {/* Progress bar */}
+          <div style={{ background: 'var(--card-border)', borderRadius: '4px', height: '6px', marginBottom: '0.8rem', overflow: 'hidden' }}>
+            <div style={{
+              width: `${Math.min((voteKick.currentVotes / voteKick.requiredVotes) * 100, 100)}%`,
+              background: 'var(--warning)', height: '100%', borderRadius: '4px', transition: 'width 0.3s ease'
+            }} />
+          </div>
+          {!hasVoted ? (
+            <div style={{ display: 'flex', gap: '0.6rem' }}>
+              <button onClick={() => handleCastVote('yes')}
+                style={{ flex: 1, padding: '0.5rem', background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.3)', color: 'var(--warning)', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '0.82rem' }}>
+                Remove
+              </button>
+              <button onClick={() => handleCastVote('no')}
+                style={{ flex: 1, padding: '0.5rem', background: 'var(--card-border)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '0.82rem' }}>
+                Keep
+              </button>
+            </div>
+          ) : (
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-tertiary)', textAlign: 'center', fontWeight: 600, margin: 0 }}>
+              Vote cast. Waiting for others...
+            </p>
+          )}
         </div>
       )}
 
@@ -304,14 +450,22 @@ function VoiceRoom() {
                   {p.alias}{p.isSelf ? ' (you)' : ''}
                 </div>
                 {showManage && !p.isSelf && (
-                  <button
-                    onClick={() => handleKick(p.socketId)}
-                    style={{ fontSize: '0.7rem', padding: '0.3rem 0.6rem', background: 'rgba(248,113,113,0.2)', border: '1px solid rgba(248,113,113,0.4)', color: '#F87171', borderRadius: '4px', cursor: 'pointer', width: '100%', fontWeight: 600 }}
-                    onMouseEnter={(e) => { e.target.style.background = '#F87171'; e.target.style.color = '#fff'; }}
-                    onMouseLeave={(e) => { e.target.style.background = 'rgba(248,113,113,0.2)'; e.target.style.color = '#F87171'; }}
-                  >
-                    Kick
-                  </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                    <button
+                      onClick={() => handleKick(p.socketId)}
+                      style={{ fontSize: '0.7rem', padding: '0.3rem 0.6rem', background: 'rgba(248,113,113,0.2)', border: '1px solid rgba(248,113,113,0.4)', color: '#F87171', borderRadius: '4px', cursor: 'pointer', width: '100%', fontWeight: 600 }}
+                      onMouseEnter={(e) => { e.target.style.background = '#F87171'; e.target.style.color = '#fff'; }}
+                      onMouseLeave={(e) => { e.target.style.background = 'rgba(248,113,113,0.2)'; e.target.style.color = '#F87171'; }}
+                    >
+                      Kick
+                    </button>
+                    <button
+                      onClick={() => handleStartVoteKick(p.socketId)}
+                      style={{ fontSize: '0.7rem', padding: '0.3rem 0.6rem', background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.3)', color: 'var(--speaking)', borderRadius: '4px', cursor: 'pointer', width: '100%', fontWeight: 600 }}
+                    >
+                      Vote Kick
+                    </button>
+                  </div>
                 )}
               </div>
             );

@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(grep -E '\\\\.\\(js|jsx|ts|tsx|json|env|md\\)$')"
+      "Bash(grep -E '\\\\.\\(js|jsx|ts|tsx|json|env|md\\)$')",
+      "Read(//c/Users/krish/OneDrive/Desktop/Mini-Project-WaveTone/**)"
     ]
   }
 }
