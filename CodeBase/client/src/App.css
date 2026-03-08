@@ -391,7 +391,7 @@
   font-weight: 600;
   border-radius: 10px;
   text-decoration: none;
-  transition: all 0.25s ease;
+  transition: all 0.35s ease;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -401,7 +401,7 @@
   color: #fff;
   border: 1px solid var(--speaking);
   box-shadow: 0 0 20px rgba(56, 189, 248, 0.15), inset 0 0 20px rgba(56, 189, 248, 0.05);
-  transition: background 0.5s cubic-bezier(0.4, 0, 0.2, 1), color 0.5s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.5s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.35s ease;
 }
 .home-btn-solid:hover {
   background: #fff;
@@ -438,7 +438,7 @@
   color: var(--text-primary);
   border: 1.5px solid rgba(10, 46, 80, 0.2);
   box-shadow: 0 0 15px rgba(10, 46, 80, 0.06);
-  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.35s ease;
 }
 [data-theme="light"] .home-btn-outline:hover {
   border-color: #0A2E50;

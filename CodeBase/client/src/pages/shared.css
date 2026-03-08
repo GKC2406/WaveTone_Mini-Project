@@ -347,7 +347,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: all 0.35s ease;
   background: var(--card-border);
   color: var(--text-primary);
   position: relative;
@@ -364,7 +364,7 @@
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.15);
   transform: translate(-50%, -50%);
-  transition: all 0.4s ease;
+  transition: all 0.2s ease;
   z-index: 0;
 }
 .control-btn:active::before {
