@@ -107,6 +107,9 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
+[data-theme="light"] .glass {
+  background: rgba(255, 255, 255, 0.7);
+}
 
 .glow-accent {
   box-shadow: 0 0 20px rgba(56, 189, 248, 0.08);

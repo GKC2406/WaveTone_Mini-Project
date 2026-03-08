@@ -21,6 +21,6 @@ export const lightTheme = {
   '--warning': '#DC2626',
   '--text-primary': '#0A2E50',
   '--text-secondary': '#475569',
-  '--text-tertiary': '#64748B',
+  '--text-tertiary': '#5A6A7A',
   '--glow': 'rgba(0, 212, 255, 0.08)',
 };

@@ -433,6 +433,77 @@
   font-size: 0.95rem;
 }
 
+/* About page */
+.about-card-title {
+  color: var(--text-primary);
+  font-weight: 700;
+  margin-bottom: 0.6rem;
+}
+.about-card-title--with-icon {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.8rem;
+}
+.about-card-title--spaced {
+  margin-bottom: 1.5rem;
+}
+.about-card-text {
+  color: var(--text-secondary);
+  line-height: 1.7;
+  font-size: 0.92rem;
+}
+.about-rules-list {
+  color: var(--text-secondary);
+  line-height: 2;
+  padding-left: 1.2rem;
+  font-size: 0.92rem;
+}
+.about-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+.about-step-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.8rem;
+}
+.about-step-number {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--speaking);
+  margin-bottom: 0.6rem;
+  opacity: 0.5;
+}
+.about-step-title {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 1rem;
+  margin-bottom: 0.4rem;
+}
+.about-step-desc {
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+  margin-bottom: auto;
+}
+.about-step-arrow {
+  height: 2.5rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+}
+.about-step-arrow span {
+  font-size: 2.2rem;
+  color: var(--speaking);
+  opacity: 0.3;
+  line-height: 1;
+}
+.card--spaced {
+  margin-bottom: 1.2rem;
+}
+
 /* About page step item */
 .about-step-item {
   background: rgba(56, 189, 248, 0.05);
