@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import roomRoutes from './src/routes/roomRoutes.js';
 import roomDetailsRoutes from './src/routes/roomDetailsRoutes.js';
 import summaryRoutes from './src/routes/summaryRoutes.js';
+import Room from './src/models/Room.js';
 
 dotenv.config();
 connectDB();
@@ -96,7 +97,10 @@ io.on('connection', (socket) => {
       if (idx !== -1) {
         participants.splice(idx, 1);
         socket.to(roomId).emit('user-left', { socketId: socket.id });
-        if (participants.length === 0) roomParticipants.delete(roomId);
+        if (participants.length === 0) {
+          roomParticipants.delete(roomId);
+          Room.findByIdAndUpdate(roomId, { isActive: false }).catch(() => {});
+        }
       }
     });
   });
@@ -108,7 +112,12 @@ function _leaveRoom(socket, roomId) {
   if (participants) {
     const idx = participants.findIndex(p => p.socketId === socket.id);
     if (idx !== -1) participants.splice(idx, 1);
-    if (participants.length === 0) roomParticipants.delete(roomId);
+    if (participants.length === 0) {
+      roomParticipants.delete(roomId);
+      // Deactivate room in MongoDB so it disappears from Browse
+      Room.findByIdAndUpdate(roomId, { isActive: false }).catch(() => {});
+      console.log(`Room ${roomId} closed — no participants remain`);
+    }
   }
   socket.to(roomId).emit('user-left', { socketId: socket.id });
   console.log(`${socket.id} left room ${roomId}`);
