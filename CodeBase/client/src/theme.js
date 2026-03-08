@@ -1,8 +1,8 @@
 // theme.js
 export const darkTheme = {
-  '--bg': '#0F1115',
-  '--surface': '#1A1D24',
-  '--card-border': '#262A33',
+  '--bg': '#13161B',
+  '--surface': '#1E2128',
+  '--card-border': '#2A2F3A',
   '--accent': '#94A3B8',
   '--speaking': '#38BDF8',
   '--warning': '#F87171',

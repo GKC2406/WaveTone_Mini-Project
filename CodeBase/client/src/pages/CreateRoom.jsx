@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import './shared.css';
 import { createRoom } from '../services/api';
 
-const categories = ['General', 'Study', 'Debate', 'Feedback', 'Chill'];
+const categories = ['General', 'Study', 'Debate', 'Feedback', 'Chill', 'Custom'];
 
 function CreateRoom() {
   const [topic, setTopic] = useState('');
   const [category, setCategory] = useState('General');
+  const [customCategory, setCustomCategory] = useState('');
   const [maxUsers, setMaxUsers] = useState(10);
   const [isPrivate, setIsPrivate] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -18,8 +19,10 @@ function CreateRoom() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    const finalCategory = category === 'Custom' ? customCategory.trim() : category;
+    if (!finalCategory) { setError('Please enter a custom category.'); setLoading(false); return; }
     try {
-      const room = await createRoom({ topic, category, maxUsers, isPrivate });
+      const room = await createRoom({ topic, category: finalCategory, maxUsers, isPrivate });
       navigate(`/room/${room._id}`, { state: { alias: 'Host', room } });
     } catch (err) {
       setError(err.message);
@@ -48,12 +51,30 @@ function CreateRoom() {
 
           <div className="form-group">
             <label className="form-label">Category</label>
-            <select className="form-select" value={category} onChange={(e) => setCategory(e.target.value)}>
+            <select className="form-select" value={category} onChange={(e) => { setCategory(e.target.value); setError(null); }}>
               {categories.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
           </div>
+
+          {category === 'Custom' && (
+            <div className="form-group">
+              <label className="form-label">Custom Category</label>
+              <input
+                className="form-input"
+                type="text"
+                placeholder="e.g. Music, Tech, Philosophy..."
+                value={customCategory}
+                onChange={(e) => setCustomCategory(e.target.value.slice(0, 20))}
+                maxLength={20}
+                required
+              />
+              <span style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem', marginTop: '0.3rem', display: 'block' }}>
+                {customCategory.length}/20 characters
+              </span>
+            </div>
+          )}
 
           <div className="form-group">
             <label className="form-label">Max Participants</label>
