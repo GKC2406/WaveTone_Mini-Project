@@ -460,17 +460,22 @@ function VoiceRoom() {
                 </div>
                 <div style={{ marginTop: '0.6rem', fontSize: '0.8rem', color: isSpeaking ? 'var(--speaking)' : 'var(--text-tertiary)', fontWeight: 600, marginBottom: '0.4rem' }}>
                   {p.alias}{p.isSelf ? ' (you)' : ''}
+                  {p.alias === 'Host' && !p.isSelf && (
+                    <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--speaking)', opacity: 0.7, marginTop: '0.1rem' }}>Host</span>
+                  )}
                 </div>
                 {showManage && !p.isSelf && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                    <button
-                      onClick={() => handleKick(p.socketId)}
-                      style={{ fontSize: '0.7rem', padding: '0.3rem 0.6rem', background: 'rgba(248,113,113,0.2)', border: '1px solid rgba(248,113,113,0.4)', color: '#F87171', borderRadius: '4px', cursor: 'pointer', width: '100%', fontWeight: 600 }}
-                      onMouseEnter={(e) => { e.target.style.background = '#F87171'; e.target.style.color = '#fff'; }}
-                      onMouseLeave={(e) => { e.target.style.background = 'rgba(248,113,113,0.2)'; e.target.style.color = '#F87171'; }}
-                    >
-                      Kick
-                    </button>
+                    {alias === 'Host' && (
+                      <button
+                        onClick={() => handleKick(p.socketId)}
+                        style={{ fontSize: '0.7rem', padding: '0.3rem 0.6rem', background: 'rgba(248,113,113,0.2)', border: '1px solid rgba(248,113,113,0.4)', color: '#F87171', borderRadius: '4px', cursor: 'pointer', width: '100%', fontWeight: 600 }}
+                        onMouseEnter={(e) => { e.target.style.background = '#F87171'; e.target.style.color = '#fff'; }}
+                        onMouseLeave={(e) => { e.target.style.background = 'rgba(248,113,113,0.2)'; e.target.style.color = '#F87171'; }}
+                      >
+                        Kick
+                      </button>
+                    )}
                     <button
                       onClick={() => handleStartVoteKick(p.socketId)}
                       style={{ fontSize: '0.7rem', padding: '0.3rem 0.6rem', background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.3)', color: 'var(--speaking)', borderRadius: '4px', cursor: 'pointer', width: '100%', fontWeight: 600 }}
