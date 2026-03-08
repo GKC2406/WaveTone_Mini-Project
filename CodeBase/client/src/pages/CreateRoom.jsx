@@ -1,31 +1,30 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './shared.css';
+import { createRoom } from '../services/api';
 
 const categories = ['General', 'Study', 'Debate', 'Feedback', 'Chill'];
 
 function CreateRoom() {
-  const [roomName, setRoomName] = useState('');
+  const [topic, setTopic] = useState('');
   const [category, setCategory] = useState('General');
   const [maxUsers, setMaxUsers] = useState(10);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
-    // TODO: call backend to create room
-    // For now, generate a random room ID
-    const roomId = Math.random().toString(36).substr(2, 9);
-    // Store room data in localStorage
-    localStorage.setItem(`room-${roomId}`, JSON.stringify({
-      roomId,
-      roomName,
-      category,
-      maxUsers,
-      isPrivate,
-      createdAt: new Date().toISOString(),
-    }));
-    navigate(`/room/${roomId}`);
+    setLoading(true);
+    setError(null);
+    try {
+      const room = await createRoom({ topic, category, maxUsers, isPrivate });
+      navigate(`/room/${room._id}`, { state: { alias: 'Host', room } });
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+    }
   };
 
   return (
@@ -41,8 +40,8 @@ function CreateRoom() {
               className="form-input"
               type="text"
               placeholder="e.g. Math Exam Prep, Chill Vibes..."
-              value={roomName}
-              onChange={(e) => setRoomName(e.target.value)}
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
               required
             />
           </div>
@@ -58,9 +57,9 @@ function CreateRoom() {
 
           <div className="form-group">
             <label className="form-label">Max Participants</label>
-            <select 
-              className="form-select" 
-              value={maxUsers} 
+            <select
+              className="form-select"
+              value={maxUsers}
               onChange={(e) => setMaxUsers(Number(e.target.value))}
             >
               {[2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
@@ -80,11 +79,22 @@ function CreateRoom() {
               onClick={() => setIsPrivate(!isPrivate)}
             />
           </div>
+
+          {error && (
+            <p style={{ color: 'var(--warning)', fontSize: '0.85rem', marginTop: '0.8rem' }}>
+              {error}
+            </p>
+          )}
         </div>
 
-        <button type="submit" className="home-btn home-btn-solid" style={{ width: '100%', justifyContent: 'center' }}>
+        <button
+          type="submit"
+          className="home-btn home-btn-solid"
+          style={{ width: '100%', justifyContent: 'center' }}
+          disabled={loading}
+        >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
-          Create Room
+          {loading ? 'Creating...' : 'Create Room'}
         </button>
       </form>
     </section>
