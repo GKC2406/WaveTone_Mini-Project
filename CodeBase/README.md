@@ -1,277 +1,275 @@
-# 🎙️ WaveTone
+# WaveTone
 
 A modern, **anonymous voice room platform** built with cutting-edge web technologies. WaveTone enables real-time peer-to-peer voice communication in temporary, moderated rooms with a focus on privacy, accessibility, and elegant design.
 
 ---
 
-## ✨ Features
+## Features
 
-- **Anonymous Voice Rooms** — Connect with others without revealing identity; temporary labels (User A, User B, etc.)
-- **Real-Time Communication** — WebRTC for direct peer-to-peer audio; Socket.io for signaling and session management
-- **Moderation & Safety** — Profanity filtering, warning system, vote-kick functionality, and transparent moderation notices
-- **Room Customization** — Set room topic, max participants, duration, profanity filter, and rejoin policies
-- **Dark & Light Themes** — Glassmorphic UI with smooth theme transitions and accessible colors
-- **Responsive Design** — Mobile-first approach; works seamlessly across devices
-- **Session Summary** — Post-room analytics including participation metrics and conversation insights
+- **Anonymous Voice Rooms** -- Connect with others without revealing identity; temporary aliases (Echo, Wave, Drift, etc.)
+- **Real-Time Communication** -- WebRTC for direct peer-to-peer audio; Socket.io for signaling and session management
+- **Audio Buffer Pipeline** -- 400ms AudioWorklet ring buffer with profanity gate; SpeechRecognition detects profanity in real-time and mutes offending segments before they reach peers
+- **Profanity Filter** -- Leet-speak aware regex matching on room topics, categories, and aliases; real-time speech detection via Web Speech API
+- **Warning System** -- 3 profanity strikes with rate-limiting; auto-kick + IP ban at threshold
+- **Vote-Kick** -- 70% participant threshold, 30-second timeout, progress bar UI
+- **IP-Based Room Bans** -- Kicked users are banned from rejoining the same room
+- **AI Conversation Summary** -- Google Gemini generates post-session summaries from collected transcripts
+- **Speaker Balance** -- Per-participant speaking time tracked via AnalyserNode; shown with progress bars on summary page
+- **Room Customization** -- Topic, category (including custom), max participants (2-10), private toggle
+- **Join by Code/Link** -- Share private room links; paste room ID or URL to join directly
+- **Dark & Light Themes** -- Glassmorphic UI with smooth transitions and accessible colors
+- **Responsive Design** -- Works across desktop and mobile browsers
+- **Auto-Destroy Rooms** -- Rooms deactivate in MongoDB when last participant leaves
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Frontend
-- **React.js** (v18+) — Component-based UI
-- **Vite** — Lightning-fast build tool
-- **React Router** — Client-side navigation
-- **CSS3** — Modern styling (Grid, Flexbox, animations, glassmorphism)
-- **SVG Icons** — Theme-aware inline graphics
+- **React.js** (v18) -- Component-based UI
+- **Vite** -- Build tool with API proxy for development
+- **React Router v6** -- Client-side navigation with v7 future flags
+- **Web Audio API** -- AudioWorklet for audio buffering, AnalyserNode for speaking detection
+- **Web Speech API** -- SpeechRecognition for real-time speech-to-text profanity detection
+- **CSS3** -- CSS variables for theming, glassmorphism, animations
 
 ### Backend
-- **Node.js** — JavaScript runtime
-- **Express.js** — Web framework
-- **MongoDB** — NoSQL database
-- **Socket.io** — Real-time bidirectional communication
-- **WebRTC** — Peer-to-peer audio streams
-- **Deployment** - FrontEnd - Vercel, Backend - Render
-
-### DevOps
-- **Vite** (frontend build)
-- **npm/npx** (package management)
-- Deployment ready for Vercel (frontend), Render/Railway/Heroku (backend)
+- **Node.js + Express.js** -- REST API + HTTP server
+- **Socket.io** -- Real-time signaling (WebRTC offer/answer/ICE, warnings, vote-kick)
+- **MongoDB Atlas** -- Room persistence, participant tracking via Mongoose
+- **Google Gemini API** -- Post-session AI conversation summary
+- **WebRTC** -- Peer-to-peer audio (mesh topology, STUN for NAT traversal)
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
-WaveTone/
-├── client/                  # React frontend
-│   ├── src/
-│   │   ├── pages/          # All 7 page components
-│   │   │   ├── Home.jsx
-│   │   │   ├── BrowseRooms.jsx
-│   │   │   ├── CreateRoom.jsx
-│   │   │   ├── JoinRoom.jsx
-│   │   │   ├── VoiceRoom.jsx
-│   │   │   ├── PostRoomSummary.jsx
-│   │   │   └── About.jsx
-│   │   ├── App.jsx         # Root component + navbar + theme toggle
-│   │   ├── App.css         # Global navbar, theme styles
-│   │   ├── index.css       # Reset, scrollbar, fonts
-│   │   ├── theme.css       # Utility classes (buttons, badges, etc.)
-│   │   ├── theme.js        # CSS variable definitions
-│   │   ├── shared.css      # Reusable component patterns
-│   │   ├── assets/         # Images, logos
-│   │   └── index.jsx       # React entry point
-│   ├── package.json
-│   └── vite.config.js
-├── server/                  # Node/Express backend
-│   ├── src/
-│   │   ├── routes/         # API endpoints
-│   │   ├── models/         # MongoDB schemas
-│   │   ├── controllers/    # Request handlers
-│   │   ├── middleware/     # Auth, validation, etc.
-│   │   └── app.js          # Express server setup
-│   └── package.json
-└── README.md
+CodeBase/
+├── client/                          # React frontend
+│   ├── index.html                   # Entry HTML
+│   ├── vite.config.js               # Vite config with /api proxy
+│   ├── public/
+│   │   └── profanity-worklet.js     # AudioWorklet processor (400ms ring buffer + gate)
+│   └── src/
+│       ├── main.jsx                 # React entry point
+│       ├── App.jsx                  # Root component, navbar, theme toggle, routes
+│       ├── App.css                  # Theme variables, navbar, buttons
+│       ├── theme.js                 # Dark/light theme CSS variable objects
+│       ├── theme.css                # Utility classes, animations
+│       ├── index.css                # Global resets, fonts
+│       ├── audio/
+│       │   ├── AudioPipeline.js     # Orchestrator: AudioContext + worklet + SpeechRecognition
+│       │   └── profanityWordList.js # Client-side blocked words + leet-speak regex
+│       ├── services/
+│       │   ├── api.js               # Centralized API fetch helpers
+│       │   └── socket.js            # Socket.io singleton
+│       └── pages/
+│           ├── Home.jsx + Home.css
+│           ├── BrowseRooms.jsx + BrowseRooms.css
+│           ├── CreateRoom.jsx
+│           ├── JoinRoom.jsx
+│           ├── VoiceRoom.jsx        # Core: WebRTC + audio pipeline + vote-kick
+│           ├── PostRoomSummary.jsx   # AI summary + speaker balance
+│           ├── About.jsx
+│           └── shared.css           # Reusable component styles
+│
+├── server/                          # Node/Express backend
+│   ├── .env                         # MONGO_URI, GEMINI_API_KEY (not in git)
+│   ├── index.js                     # Express + Socket.io signaling + warnings + vote-kick
+│   └── src/
+│       ├── db.js                    # MongoDB connection
+│       ├── models/Room.js           # Mongoose schema
+│       ├── controllers/
+│       │   ├── roomController.js    # List + create rooms (with profanity check)
+│       │   ├── roomDetailsController.js  # Get/join/leave room
+│       │   └── summaryController.js      # Session summary + Gemini AI summary
+│       ├── routes/
+│       │   ├── roomRoutes.js
+│       │   ├── roomDetailsRoutes.js
+│       │   └── summaryRoutes.js
+│       └── utils/
+│           └── profanityFilter.js   # Server-side blocked words + regex
+│
+└── Z+ Updates & Help/              # Documentation
+    ├── Project_Info.txt             # Architecture, WebRTC deep dive, data flows
+    ├── Future Upgrades AI.txt       # AI feature options
+    ├── Future_Features[Non-AI].txt  # Non-AI enhancements
+    ├── AI_Recommendations.txt       # Prioritized feature roadmap with statuses
+    └── Viva_Questions.txt           # 50+ Q&A for viva preparation
 ```
 
 ---
 
-## 🎨 Color Palettes
-
-### Dark Theme (Default)
-| Element | Hex Code | Usage |
-|---------|----------|-------|
-| Background | `#0F1115` | Main page background |
-| Surface | `#1A1D24` | Cards, surfaces |
-| Card Border | `#262A33` | Subtle dividers |
-| Accent | `#38BDF8` | Links, highlights (cyan) |
-| Speaking Ring | `#38BDF8` | Active speaker indicator |
-| Warning | `#F87171` | Alerts, errors |
-| Text Primary | `#F1F5F9` | Main text |
-| Text Secondary | `#94A3B8` | Muted text |
-
-### Light Theme (Glassmorphic)
-| Element | Hex Code | Usage |
-|---------|----------|-------|
-| Background | `#F0F9FC` | Main page background |
-| Surface | `#FFFFFF` | Cards, surfaces |
-| Card Border | `#CFFAFE` | Subtle dividers |
-| Navbar Background | `#FFFFFFCC` | 80% opacity white with blur |
-| Navbar Border | `#E2E8F0` | Hairline separator |
-| Link Idle | `#64748B` | Medium slate text |
-| Link Hover | `#0EA5E9` | Cyber blue highlight |
-| Active Link | `#0F172A` | Deep navy with white text |
-| Text Primary | `#0A2E50` | Main text (navy) |
-| Warning | `#DC2626` | Alerts, errors |
-
----
-
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
-- Node.js v18+ and npm v9+
-- MongoDB (local or Atlas cluster)
+- Node.js v18+ and npm
+- MongoDB Atlas cluster (or local MongoDB)
+- Google AI Studio API key (free tier, for AI summary)
 
 ### Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/WaveTone.git
-   cd WaveTone
-   ```
-
-2. **Install frontend dependencies**
-   ```bash
-   cd client
-   npm install
-   ```
-
-3. **Install backend dependencies**
-   ```bash
-   cd ../server
-   npm install
-   ```
-
-### Development
-
-#### Start Frontend (Vite)
 ```bash
-cd client
-npm run dev
+# Clone
+git clone https://github.com/yourusername/WaveTone.git
+cd WaveTone/CodeBase
+
+# Install frontend
+cd client && npm install
+
+# Install backend
+cd ../server && npm install
 ```
-- Runs on `http://localhost:5173` (or next available port)
-- Hot module replacement enabled
 
-#### Start Backend (Node)
+### Environment Variables
+
+Create `server/.env`:
+```
+MONGO_URI=your_mongodb_connection_string
+GEMINI_API_KEY=your_google_ai_studio_key
+```
+
+### Run Development
+
 ```bash
+# Terminal 1 -- Backend
 cd server
-npm run dev
-```
-- Runs on `http://localhost:5000` (configurable in `.env`)
-- Connect to MongoDB via `MONGO_URI` in `.env`
+npm run dev          # Runs on http://localhost:5000
 
-#### Access the App
-- Open `http://localhost:5173` in your browser
-- Dark theme loads by default; toggle via sun/moon icon in navbar
-
----
-
-## 📖 Pages Overview
-
-| Page | Purpose | Key Features |
-|------|---------|--------------|
-| **Home** | Landing page | Hero section, feature cards, animated wave, CTA buttons |
-| **Browse Rooms** | Discover rooms | Search bar, category tabs, live room cards with participant count |
-| **Create Room** | Start a room | Form: topic, category, max users, duration, moderation settings |
-| **Join Room** | Enter a room | Room info display, rules checkbox, alias input |
-| **Voice Room** | Active session | Top bar (title, timer, leave), participant grid, bottom controls (mute, raise hand, volume) |
-| **Post-Room Summary** | Session review | Stats (duration, participants), conversation insights, re-join button |
-| **About** | Info & rules | What WaveTone is, anonymity explanation, moderation transparency |
-
----
-
-## 🔐 Anonymity & Moderation
-
-### User Privacy
-- No usernames or profiles shared in-room
-- Temporary labels: "User A", "User B", etc.
-- Session data cleared after room closes
-- No voice recordings stored
-
-### Moderation Features
-- **Profanity Filter** — Configurable per room (ON/OFF)
-- **Warning System** — Up to 3 warnings before removal
-- **Vote-Kick** — Participants can vote to remove disruptive users
-- **Moderation Notices** — Toast messages for warnings (non-intrusive)
-- **Transparency** — Users see moderation rules on join
-
----
-
-## 🎯 Deployment
-
-### Frontend (Vercel)
-```bash
+# Terminal 2 -- Frontend
 cd client
-npm run build
-# Deploy `dist/` folder to Vercel
+npm run dev          # Runs on http://localhost:5173
 ```
 
-### Backend (Render / Railway / Heroku)
-```bash
-cd server
-# Set env variables: MONGO_URI, PORT, NODE_ENV=production
-npm run build
-npm start
-```
-
-**Note:** Ensure `FRONTEND_URL` and `BACKEND_URL` are correctly set in environment variables for CORS and WebRTC signaling.
+Vite proxies `/api` requests to the backend automatically.
 
 ---
 
-## 🔄 API Endpoints (Stub)
+## How It Works
+
+### Room Lifecycle
+1. **Create** -- POST /api/rooms (profanity checked) -- saved to MongoDB
+2. **Browse** -- GET /api/rooms (stale rooms auto-cleaned, private rooms hidden)
+3. **Join** -- Enter alias -- navigate to VoiceRoom
+4. **Voice** -- WebRTC peer connections + audio buffer pipeline + moderation
+5. **Leave** -- Room auto-deactivates when empty -- summary with AI + speaker balance
+
+### Audio Pipeline (Core Innovation)
+```
+Mic --> AudioWorklet (400ms ring buffer with gate)
+         --> MediaStreamAudioDestination --> processedStream --> WebRTC peers
+
+Mic --> SpeechRecognition (parallel, interimResults: true)
+         --> profanity regex check --> if detected --> mute gate 500ms + server warning
+```
+
+### Moderation Layers
+1. **Text filter** -- Room topics, categories, aliases checked server-side
+2. **Audio filter** -- Real-time SpeechRecognition + profanity gate (client-side)
+3. **Warning system** -- 3 strikes, rate-limited, server-authoritative
+4. **Host kick** -- Instant removal + IP ban
+5. **Vote-kick** -- 70% democratic threshold + IP ban
+6. **IP bans** -- Per-room, in-memory, cleaned on room close
+
+---
+
+## API Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/rooms` | GET | List all rooms |
-| `/api/rooms` | POST | Create a new room |
+| `/api/rooms` | GET | List active, non-private rooms (newest first) |
+| `/api/rooms` | POST | Create room (profanity checked, whitelisted fields) |
 | `/api/rooms/:id` | GET | Get room details |
-| `/api/rooms/:id/join` | POST | Join a room session |
-| `/api/sessions/:id/summary` | GET | Post-room summary |
+| `/api/rooms/:id/join` | POST | Join room (capacity check, participant tracking) |
+| `/api/rooms/:id/leave` | POST | Leave room (auto-deactivate if empty) |
+| `/api/sessions/:id/summary` | GET | Session stats |
+| `/api/sessions/:id/ai-summary` | POST | AI conversation summary via Gemini |
+
+## Socket.io Events
+
+| Event | Direction | Purpose |
+|-------|-----------|---------|
+| `join-room` | Client -> Server | Join with roomId + alias |
+| `room-users` | Server -> Client | Current participants list |
+| `user-joined` / `user-left` | Server -> Clients | Participant changes |
+| `offer` / `answer` / `ice-candidate` | Relay | WebRTC signaling |
+| `kick-user` | Client -> Server | Host kick + IP ban |
+| `profanity-warning` | Client -> Server | Report detected profanity |
+| `warning-issued` | Server -> Client | Warning count feedback |
+| `vote-kick-start` / `vote-kick-cast` | Client -> Server | Vote-kick flow |
+| `vote-kick-active` / `vote-kick-update` / `vote-kick-ended` | Server -> Clients | Vote-kick broadcasts |
+| `kicked` / `join-denied` | Server -> Client | Removal / ban notification |
 
 ---
 
-## 🛠️ Development Workflow
+## Color Palettes
 
-1. **Components:** Each page is a self-contained React component with its own CSS
-2. **Styling:** Global theme variables in `theme.js`, component-specific styles in each `.css` file
-3. **Theme Toggle:** Click sun/moon icon to switch themes; `data-theme` attribute on `<html>` triggers CSS overrides
-4. **Reusable Patterns:** Check `shared.css` for button, badge, toggle, and card styles
+### Dark Theme
+| Variable | Value | Usage |
+|----------|-------|-------|
+| `--bg` | `#13161B` | Background |
+| `--surface` | `#1E2128` | Cards |
+| `--card-border` | `#2A2F3A` | Borders |
+| `--speaking` | `#38BDF8` | Accent, speaking indicator |
+| `--warning` | `#F87171` | Alerts |
+| `--text-primary` | `#F1F5F9` | Main text |
 
-### Adding a New Feature
-1. Create component file in `src/pages/` or `src/components/`
-2. Import and use shared styles from `shared.css`
-3. Add theme overrides in `App.css` if needed
-4. Use CSS custom properties (`--accent`, `--text-primary`, etc.) for theme consistency
-
----
-
-## ✅ To-Do / Roadmap
-
-- [ ] Backend API implementation
-- [ ] MongoDB schemas and models
-- [ ] Socket.io signaling server
-- [ ] WebRTC peer connection logic
-- [ ] Authentication (email/OAuth)
-- [ ] AI conversation summarization (optional)
-- [ ] Analytics dashboard (admin)
-- [ ] Mobile app (React Native)
-- [ ] Accessibility audit (WCAG AA)
+### Light Theme
+| Variable | Value | Usage |
+|----------|-------|-------|
+| `--bg` | `#F0F9FC` | Background |
+| `--surface` | `#FFFFFF` | Cards |
+| `--card-border` | `#CFFAFE` | Borders |
+| `--speaking` | `#00D4FF` | Accent |
+| `--text-primary` | `#0A2E50` | Main text (navy) |
 
 ---
 
-## 📝 License
+## Deployment
 
-This project is open source under the MIT License. See `LICENSE` for details.
+### Frontend (Vercel)
+```bash
+cd client && npm run build
+# Deploy dist/ to Vercel
+# Set env: VITE_API_URL=https://your-backend-url.com
+```
 
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-## 📞 Support
-
-For questions or issues, please open a GitHub Issue or contact the maintainers.
+### Backend (Railway / Render)
+```bash
+# Set env: MONGO_URI, GEMINI_API_KEY, PORT
+# Root directory: server
+# Start command: npm start
+```
 
 ---
 
-**WaveTone** — *Connect anonymously. Speak freely. Listen respectfully.* 🎙️
+## Completed Features
 
+- [x] Backend API (Express + MongoDB + Mongoose)
+- [x] Socket.io signaling server
+- [x] WebRTC peer-to-peer voice
+- [x] Audio buffer pipeline (400ms AudioWorklet + profanity gate)
+- [x] Real-time speech profanity detection (Web Speech API)
+- [x] Text profanity filter (leet-speak aware regex)
+- [x] Warning system (3 strikes, rate-limited, auto-kick)
+- [x] Vote-kick (70% threshold, 30s timeout)
+- [x] IP-based room bans
+- [x] Room auto-destroy when empty
+- [x] Private rooms + copy link + join by code
+- [x] Custom room categories
+- [x] Dark/light theme with persistence
+- [x] AI conversation summary (Google Gemini)
+- [x] Speaker balance tracking
+
+## Future Enhancements
+
+- [ ] AI behavior detection (interruptions, volume spikes, monologues)
+- [ ] Adaptive moderation thresholds per room category
+- [ ] Room timer with auto-close
+- [ ] Conversation phase control (Intro / Discussion / Summary)
+- [ ] TensorFlow.js toxicity model (upgrade from regex)
+
+---
+
+**WaveTone** -- *Connect anonymously. Speak freely. Listen respectfully.*

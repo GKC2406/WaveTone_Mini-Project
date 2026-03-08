@@ -588,3 +588,67 @@ Q: Can the vote target vote on their own kick?
 A: No. The server checks if socket.id === session.targetSocketId and ignores the
    vote. The target also doesn't receive the 'vote-kick-active' broadcast —
    they don't know a vote is happening until they're kicked or it ends.
+
+
+--- AI CONVERSATION SUMMARY QUESTIONS (NEW) ---
+
+Q: How does the AI conversation summary work?
+A: 1. During the session, SpeechRecognition collects final (non-interim) transcripts
+      in AudioPipeline.transcripts array
+   2. When user leaves, transcripts are passed via navigate state to PostRoomSummary
+   3. PostRoomSummary sends POST /api/sessions/:id/ai-summary with transcripts + room context
+   4. Server calls Google Gemini 2.0 Flash API with a prompt asking for a 2-4 sentence summary
+   5. AI response is displayed in a highlighted card on the summary page
+   One API call per session. Zero real-time impact.
+
+Q: Why Gemini and not a local model?
+A: Gemini 2.0 Flash is free (15 req/min), fast (~1-2s response), and requires zero
+   infrastructure. A local model (e.g., TensorFlow.js) would need to be downloaded
+   to the client (~100MB+) and couldn't generate coherent text summaries — that
+   requires a large language model. The tradeoff (network dependency) is acceptable
+   because the summary runs AFTER the session, not during.
+
+Q: What if the Gemini API key is missing or the call fails?
+A: Graceful degradation. The server checks if GEMINI_API_KEY exists. If not, it
+   returns { summary: null, reason: 'AI summary not configured' }. If the API call
+   fails, it catches the error and returns { summary: null, reason: 'failed' }.
+   The client shows the summary card only when data is available. No errors shown.
+
+Q: Is any audio sent to the AI?
+A: No. Only text transcripts from the Web Speech API are sent. The SpeechRecognition
+   API runs in the browser and converts speech to text locally. Only the resulting
+   text strings are sent to the Gemini API. No audio data ever leaves the client.
+
+Q: How do you prevent abuse of the AI endpoint?
+A: Transcripts are capped at 100 entries (server-side) to prevent oversized payloads.
+   The endpoint is a standard POST request — rate limiting could be added via
+   express-rate-limit if needed. The free Gemini tier itself limits to 15 req/min.
+
+
+--- SPEAKER BALANCE QUESTIONS (NEW) ---
+
+Q: How does the speaking time tracker work?
+A: The existing AnalyserNode polls audio frequency data every 100ms for each
+   participant (including self). When the average amplitude exceeds the threshold
+   (avg > 10), that participant's speaking time counter increments by 0.1 seconds.
+   This runs on the same interval as the speaking indicator — zero additional
+   infrastructure, just one line of code added to the existing detection loop.
+
+Q: Where is speaking time data stored?
+A: In a useRef Map: speakingTimeRef.current[id] = seconds. It's client-side only,
+   never sent to the server. On leave, VoiceRoom builds a speakingTimes object
+   mapping aliases to rounded seconds and passes it via navigate state to
+   PostRoomSummary.
+
+Q: What does the speaker balance display look like?
+A: A card with each participant listed in descending order of speaking time.
+   Each entry shows: alias, formatted time (e.g., "4m 12s"), percentage of total,
+   and a progress bar. This makes it immediately visible if the conversation was
+   balanced or dominated by one speaker.
+
+Q: How is this related to AI behavior detection?
+A: The speaker balance tracker collects the same metadata that AI Option B
+   (Disruptive Behavior Detection) would use. Speaking frequency, duration, and
+   dominance patterns are all derivable from this data. Adding interruption
+   detection (spoke within 500ms of someone stopping) and volume spike tracking
+   would complete the AI behavior model — all without analyzing speech content.

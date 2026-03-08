@@ -100,7 +100,7 @@ PRIORITY 2 — IMPLEMENT NEXT (Low Effort, High Value)
 ===============================================================================
 
 4> Speaking Time Tracker + Balance Insight
-   Status: EASY — infrastructure already exists
+   Status: IMPLEMENTED
 
    What it does:
    > AnalyserNode already detects speaking state per user (every 100ms)
@@ -194,16 +194,21 @@ PRIORITY 3 — NICE TO HAVE (Polish / Future)
 
 
 10> AI Conversation Summary (Post-Room)
-    Status: FUTURE — requires API key + cost
+    Status: IMPLEMENTED — using Google Gemini 2.0 Flash (free tier)
 
     What it does:
-    > During room, SpeechRecognition produces transcripts
-    > Store key phrases (not full audio) temporarily
-    > On room close, send to Claude Haiku API for summary
-    > Display on PostRoomSummary page
-    > No audio permanently stored — only abstracted discussion points
+    > During room, SpeechRecognition collects final transcripts
+    > On room close, transcripts sent to POST /api/sessions/:id/ai-summary
+    > Server calls Gemini API with transcripts + room context
+    > AI generates 2-4 sentence summary displayed on PostRoomSummary
+    > No audio permanently stored — only temporary text transcripts
 
-    Recommended model: Claude Haiku 4.5 (~$0.001/summary)
+    Files:
+    > server/src/controllers/summaryController.js — generateAISummary endpoint
+    > client/src/pages/PostRoomSummary.jsx — AI summary card with loading state
+    > client/src/audio/AudioPipeline.js — transcript collection (getTranscripts())
+
+    Model: Google Gemini 2.0 Flash (free API tier: 15 req/min, 1500 req/day)
 
 
 11> Conversation Phase Control
