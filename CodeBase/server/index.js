@@ -1,11 +1,16 @@
+import summaryRoutes from './src/routes/summaryRoutes.js';
+app.use('/api/sessions', summaryRoutes);
+import roomDetailsRoutes from './src/routes/roomDetailsRoutes.js';
+app.use('/api/rooms', roomDetailsRoutes);
 import express from 'express';
 import http from 'http';
 import { Server as SocketIOServer } from 'socket.io';
-import mongoose from 'mongoose';
+import connectDB from './src/db.js';
 import cors from 'cors';
 import dotenv from 'dotenv';
 
 dotenv.config();
+connectDB();
 
 const app = express();
 const server = http.createServer(app);
@@ -19,14 +24,12 @@ const io = new SocketIOServer(server, {
 app.use(cors());
 app.use(express.json());
 
-// MongoDB connection
-mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/wavetone', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-});
+// MongoDB connection handled in connectDB()
 
-// Room/session models (stub)
-// ... Add Mongoose models here ...
+
+// Room API routes
+import roomRoutes from './src/routes/roomRoutes.js';
+app.use('/api/rooms', roomRoutes);
 
 // API routes (stub)
 app.get('/', (req, res) => {
