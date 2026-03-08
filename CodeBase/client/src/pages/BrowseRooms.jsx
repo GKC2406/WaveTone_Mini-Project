@@ -32,13 +32,17 @@ function BrowseRooms() {
     }
   };
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
+  const fetchRooms = () => {
+    setLoading(prev => rooms.length === 0 ? true : prev); // only show skeleton on first load
     getRooms()
-      .then(data => { if (!cancelled) { setRooms(data); setLoading(false); } })
-      .catch(err => { if (!cancelled) { setError(err.message); setLoading(false); } });
-    return () => { cancelled = true; };
+      .then(data => { setRooms(data); setLoading(false); })
+      .catch(err => { setError(err.message); setLoading(false); });
+  };
+
+  useEffect(() => {
+    fetchRooms();
+    const interval = setInterval(fetchRooms, 10000); // auto-refresh every 10s
+    return () => clearInterval(interval);
   }, []);
 
   const filtered = rooms
@@ -98,8 +102,21 @@ function BrowseRooms() {
       </div>
 
       {loading && (
-        <div className="empty-state">
-          <p style={{ color: 'var(--text-secondary)' }}>Loading rooms...</p>
+        <div className="room-grid">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div className="skeleton-card" key={i}>
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                <div className="skeleton skeleton-badge" />
+                <div className="skeleton skeleton-badge" />
+              </div>
+              <div className="skeleton skeleton-title" />
+              <div className="skeleton skeleton-text short" />
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
+                <div className="skeleton skeleton-text" style={{ width: '60px', marginBottom: 0 }} />
+                <div className="skeleton skeleton-text" style={{ width: '40px', marginBottom: 0 }} />
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

@@ -433,6 +433,55 @@
   font-size: 0.95rem;
 }
 
+/* Shimmer skeleton */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--card-border) 25%, rgba(56,189,248,0.06) 50%, var(--card-border) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.5s infinite ease-in-out;
+  border-radius: 8px;
+}
+.skeleton-text {
+  height: 14px;
+  margin-bottom: 0.6rem;
+  width: 80%;
+}
+.skeleton-text.short {
+  width: 50%;
+}
+.skeleton-text.wide {
+  width: 95%;
+}
+.skeleton-title {
+  height: 20px;
+  width: 60%;
+  margin-bottom: 0.8rem;
+}
+.skeleton-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+}
+.skeleton-badge {
+  height: 22px;
+  width: 60px;
+  border-radius: 6px;
+  display: inline-block;
+}
+.skeleton-card {
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 1.5rem;
+  background: var(--bg);
+}
+[data-theme="light"] .skeleton {
+  background: linear-gradient(90deg, rgba(10,46,80,0.06) 25%, rgba(10,46,80,0.02) 50%, rgba(10,46,80,0.06) 75%);
+  background-size: 800px 100%;
+}
+
 /* About page */
 .about-card-title {
   color: var(--text-primary);

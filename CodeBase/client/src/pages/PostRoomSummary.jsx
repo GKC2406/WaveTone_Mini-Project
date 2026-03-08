@@ -91,9 +91,11 @@ function PostRoomSummary() {
                 AI Conversation Summary
               </h3>
               {aiLoading ? (
-                <p style={{ color: 'var(--text-tertiary)', fontSize: '0.88rem', fontStyle: 'italic' }}>
-                  Generating summary...
-                </p>
+                <div>
+                  <div className="skeleton skeleton-text wide" />
+                  <div className="skeleton skeleton-text" />
+                  <div className="skeleton skeleton-text short" />
+                </div>
               ) : (
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.7 }}>
                   {aiSummary}

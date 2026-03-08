@@ -31,7 +31,15 @@ function JoinRoom() {
     return (
       <section className="page-section">
         <h2 className="page-title">Join Room</h2>
-        <p className="page-subtitle" style={{ color: 'var(--text-secondary)' }}>Loading room info...</p>
+        <p className="page-subtitle">Loading room info...</p>
+        <div className="skeleton-card" style={{ marginBottom: '1.2rem' }}>
+          <div className="skeleton skeleton-text wide" />
+          <div className="skeleton skeleton-text" />
+          <div className="skeleton skeleton-text short" />
+          <div className="skeleton skeleton-text" style={{ marginTop: '1.5rem' }} />
+          <div className="skeleton skeleton-title" style={{ marginTop: '1rem' }} />
+        </div>
+        <div className="skeleton" style={{ height: '48px', borderRadius: '10px', width: '100%' }} />
       </section>
     );
   }
