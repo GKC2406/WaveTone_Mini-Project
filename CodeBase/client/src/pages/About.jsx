@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import './shared.css';
 
 function About() {
+  useEffect(() => { document.title = 'About - WaveTone'; }, []);
   return (
     <section className="page-section">
       <h2 className="page-title">About WaveTone</h2>

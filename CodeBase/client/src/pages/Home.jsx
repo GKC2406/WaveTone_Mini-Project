@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import './Home.css';
 import MainLogo from '../assets/main-logo.png';
 
 function Home() {
+  useEffect(() => { document.title = 'WaveTone'; }, []);
   return (
     <div className="home-page">
       {/* Hero Section */}
@@ -12,7 +13,7 @@ function Home() {
         <div className="home-hero-content slide-up">
           <img src={MainLogo} alt="WaveTone Logo" className="home-logo" />
           <h1 className="home-title">WaveTone</h1>
-          <p className="home-tagline">Connect anonymously. Speak freely. Listen respectfully. 🎙️</p>
+          <p className="home-tagline">Connect anonymously. Speak freely. Listen respectfully.</p>
           <p className="home-subtext">Anonymous voice rooms with real-time moderation.</p>
           <div className="home-actions">
             <NavLink to="/create" className="home-btn home-btn-solid">

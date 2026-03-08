@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './shared.css';
 import { createRoom } from '../services/api';
@@ -14,6 +14,7 @@ function CreateRoom() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  useEffect(() => { document.title = 'Create Room - WaveTone'; }, []);
 
   const handleCreate = async (e) => {
     e.preventDefault();

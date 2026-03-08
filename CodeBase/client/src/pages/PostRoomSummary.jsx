@@ -13,6 +13,8 @@ function PostRoomSummary() {
   const [aiSummary, setAiSummary] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
 
+  useEffect(() => { document.title = 'Session Summary - WaveTone'; }, []);
+
   useEffect(() => {
     if (stateData.room) {
       setSummary({

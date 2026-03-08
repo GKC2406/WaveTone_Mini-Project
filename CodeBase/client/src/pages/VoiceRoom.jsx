@@ -20,6 +20,8 @@ function VoiceRoom() {
   const roomData = location.state?.room || {};
   const maxUsers = roomData.maxUsers || 10;
 
+  useEffect(() => { document.title = roomData.topic ? `${roomData.topic} - WaveTone` : 'Voice Room - WaveTone'; }, [roomData.topic]);
+
   const [participants, setParticipants] = useState([]);
   const [muted, setMuted] = useState(false);
   const [showManage, setShowManage] = useState(false);

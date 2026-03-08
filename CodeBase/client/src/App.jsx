@@ -8,6 +8,7 @@ import JoinRoom from './pages/JoinRoom';
 import VoiceRoom from './pages/VoiceRoom';
 import PostRoomSummary from './pages/PostRoomSummary';
 import About from './pages/About';
+import NotFound from './pages/NotFound';
 import './App.css';
 import { useEffect, useState } from 'react';
 import { darkTheme, lightTheme } from './theme';
@@ -118,6 +119,7 @@ function App() {
             <Route path="/room/:roomId" element={<VoiceRoom />} />
             <Route path="/summary/:roomId" element={<PostRoomSummary />} />
             <Route path="/about" element={<About />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </div>
       </main>

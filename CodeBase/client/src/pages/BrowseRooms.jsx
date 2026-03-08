@@ -32,6 +32,8 @@ function BrowseRooms() {
     }
   };
 
+  useEffect(() => { document.title = 'Browse Rooms - WaveTone'; }, []);
+
   const fetchRooms = () => {
     setLoading(prev => rooms.length === 0 ? true : prev); // only show skeleton on first load
     getRooms()
