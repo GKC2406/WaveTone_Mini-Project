@@ -69,13 +69,19 @@ io.on('connection', (socket) => {
       return;
     }
 
-    const cleanAlias = containsProfanity(alias) ? filterProfanity(alias) : alias;
+    if (!roomParticipants.has(roomId)) roomParticipants.set(roomId, []);
+    const participants = roomParticipants.get(roomId);
+
+    // Assign 'Host' only to the first participant, others get their alias or 'Anonymous'
+    let cleanAlias;
+    if (participants.length === 0) {
+      cleanAlias = 'Host';
+    } else {
+      cleanAlias = alias && alias !== 'Host' ? (containsProfanity(alias) ? filterProfanity(alias) : alias) : 'Anonymous';
+    }
 
     socket.join(roomId);
     socketAliases.set(socket.id, cleanAlias);
-
-    if (!roomParticipants.has(roomId)) roomParticipants.set(roomId, []);
-    const participants = roomParticipants.get(roomId);
 
     socket.emit('room-users', participants);
     participants.push({ socketId: socket.id, alias: cleanAlias });
@@ -104,6 +110,14 @@ io.on('connection', (socket) => {
 
   // ==================== HOST KICK ====================
   socket.on('kick-user', ({ roomId, targetSocketId }) => {
+    // Only allow Host to kick
+    const participants = roomParticipants.get(roomId);
+    if (!participants) return;
+    const host = participants[0];
+    if (!host || host.socketId !== socket.id) {
+      // Not the host, ignore
+      return;
+    }
     const targetSocket = io.sockets.sockets.get(targetSocketId);
     if (targetSocket) {
       _banAndKick(targetSocket, roomId, 'You have been kicked from this room.');
@@ -149,6 +163,10 @@ io.on('connection', (socket) => {
 
     const participants = roomParticipants.get(roomId);
     if (!participants) return;
+    if (participants.length < 3) {
+      socket.emit('vote-kick-error', { message: 'Vote kick requires at least 3 participants.' });
+      return;
+    }
     const target = participants.find(p => p.socketId === targetSocketId);
     if (!target) return;
 

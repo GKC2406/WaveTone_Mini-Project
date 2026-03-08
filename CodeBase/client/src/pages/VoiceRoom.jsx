@@ -476,9 +476,20 @@ function VoiceRoom() {
                         Kick
                       </button>
                     )}
+                    {alias !== 'Host' && (
+                      <button
+                        disabled
+                        style={{ fontSize: '0.7rem', padding: '0.3rem 0.6rem', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.1)', color: '#aaa', borderRadius: '4px', cursor: 'not-allowed', width: '100%', fontWeight: 600 }}
+                        title="Only the Host can kick directly"
+                      >
+                        Kick
+                      </button>
+                    )}
                     <button
                       onClick={() => handleStartVoteKick(p.socketId)}
-                      style={{ fontSize: '0.7rem', padding: '0.3rem 0.6rem', background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.3)', color: 'var(--speaking)', borderRadius: '4px', cursor: 'pointer', width: '100%', fontWeight: 600 }}
+                      disabled={allParticipants.length < 3}
+                      style={{ fontSize: '0.7rem', padding: '0.3rem 0.6rem', background: allParticipants.length < 3 ? 'rgba(56,189,248,0.08)' : 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.3)', color: allParticipants.length < 3 ? '#aaa' : 'var(--speaking)', borderRadius: '4px', cursor: allParticipants.length < 3 ? 'not-allowed' : 'pointer', width: '100%', fontWeight: 600 }}
+                      title={allParticipants.length < 3 ? 'Vote kick requires at least 3 participants' : 'Vote Kick'}
                     >
                       Vote Kick
                     </button>
