@@ -30,3 +30,6 @@ export const leaveRoom = (id, data) =>
   request(`/rooms/${id}/leave`, { method: 'POST', body: JSON.stringify(data) });
 
 export const getSessionSummary = (id) => request(`/sessions/${id}/summary`);
+
+export const getAISummary = (id, data) =>
+  request(`/sessions/${id}/ai-summary`, { method: 'POST', body: JSON.stringify(data) });

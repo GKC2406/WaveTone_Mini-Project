@@ -13,6 +13,7 @@ export class AudioPipeline {
     this.processedStream = null;
     this.recognition = null;
     this.isActive = true;
+    this.transcripts = []; // collected final transcripts for AI summary
   }
 
   async init() {
@@ -60,6 +61,10 @@ export class AudioPipeline {
     this.recognition.onresult = (event) => {
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
+        // Collect final (non-interim) transcripts for AI summary
+        if (event.results[i].isFinal && transcript.trim().length > 2) {
+          this.transcripts.push(transcript.trim());
+        }
         if (containsProfanity(transcript)) {
           this._triggerMute();
           this.onProfanityDetected?.(transcript);
@@ -101,6 +106,10 @@ export class AudioPipeline {
         try { this.recognition.start(); } catch { /* may fail if already running */ }
       }
     }, 300);
+  }
+
+  getTranscripts() {
+    return this.transcripts;
   }
 
   destroy() {

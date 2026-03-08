@@ -300,8 +300,9 @@ function VoiceRoom() {
     socketRef.current?.emit('leave-room', { roomId });
     localStreamRef.current?.getTracks().forEach(t => t.stop());
     Object.values(peerConnectionsRef.current).forEach(pc => pc.close());
+    const transcripts = audioPipelineRef.current?.getTranscripts() || [];
     navigate(`/summary/${roomId}`, {
-      state: { room: roomData, duration: durationMin, participantCount: participants.length + 1 },
+      state: { room: roomData, duration: durationMin, participantCount: participants.length + 1, transcripts },
     });
   };
 

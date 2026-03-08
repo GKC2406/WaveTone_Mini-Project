@@ -1,9 +1,9 @@
 import express from 'express';
-import { getSessionSummary } from '../controllers/summaryController.js';
+import { getSessionSummary, generateAISummary } from '../controllers/summaryController.js';
 
 const router = express.Router();
 
-// GET /api/sessions/:id/summary
 router.get('/:id/summary', getSessionSummary);
+router.post('/:id/ai-summary', generateAISummary);
 
 export default router;

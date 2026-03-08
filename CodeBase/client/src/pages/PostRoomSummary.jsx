@@ -1,30 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, Link } from 'react-router-dom';
 import './shared.css';
-import { getSessionSummary } from '../services/api';
+import { getSessionSummary, getAISummary } from '../services/api';
 
 function PostRoomSummary() {
   const { roomId } = useParams();
   const location = useLocation();
 
-  // Prefer data passed via navigate state (immediate, no extra fetch)
   const stateData = location.state || {};
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(!stateData.room);
+  const [aiSummary, setAiSummary] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     if (stateData.room) {
-      // Build summary from passed state
       setSummary({
         topic: stateData.room.topic,
         category: stateData.room.category,
         duration: stateData.duration || 1,
         participantCount: stateData.participantCount || 1,
-        isActive: stateData.room.isActive,
       });
+
+      // Request AI summary if transcripts are available
+      const transcripts = stateData.transcripts || [];
+      if (transcripts.length > 0) {
+        setAiLoading(true);
+        getAISummary(roomId, {
+          transcripts,
+          topic: stateData.room.topic,
+          category: stateData.room.category,
+          duration: stateData.duration,
+          participantCount: stateData.participantCount,
+        })
+          .then(data => {
+            setAiSummary(data.summary || data.reason || null);
+            setAiLoading(false);
+          })
+          .catch(() => setAiLoading(false));
+      }
       return;
     }
-    // Fallback: fetch from API
+
     getSessionSummary(roomId)
       .then(data => {
         setSummary({
@@ -32,7 +49,6 @@ function PostRoomSummary() {
           category: data.category,
           duration: data.duration,
           participantCount: data.participantCount,
-          isActive: data.isActive,
         });
         setLoading(false);
       })
@@ -40,7 +56,7 @@ function PostRoomSummary() {
         setSummary({ topic: 'Unknown', category: '-', duration: '-', participantCount: '-' });
         setLoading(false);
       });
-  }, [roomId, stateData]);
+  }, [roomId]);
 
   return (
     <section className="page-section">
@@ -66,6 +82,28 @@ function PostRoomSummary() {
               <div className="stat-label">Warnings</div>
             </div>
           </div>
+
+          {/* AI Summary */}
+          {(aiLoading || aiSummary) && (
+            <div className="card" style={{ marginBottom: '1.2rem', border: '1.5px solid var(--speaking)', background: 'rgba(56,189,248,0.03)' }}>
+              <h3 style={{ color: 'var(--text-primary)', fontWeight: 700, marginBottom: '0.8rem', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--speaking)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a4 4 0 0 0-4 4v6a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4z"/><path d="M18 10v2a6 6 0 0 1-12 0v-2"/><path d="M6 20h12"/><path d="M12 16v4"/></svg>
+                AI Conversation Summary
+              </h3>
+              {aiLoading ? (
+                <p style={{ color: 'var(--text-tertiary)', fontSize: '0.88rem', fontStyle: 'italic' }}>
+                  Generating summary...
+                </p>
+              ) : (
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.7 }}>
+                  {aiSummary}
+                </p>
+              )}
+              <p style={{ color: 'var(--text-tertiary)', fontSize: '0.72rem', marginTop: '0.6rem', fontStyle: 'italic' }}>
+                Powered by Google Gemini. Based on speech-to-text transcripts — no audio stored.
+              </p>
+            </div>
+          )}
 
           {/* Details */}
           <div className="card" style={{ marginBottom: '1.2rem' }}>
