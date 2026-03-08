@@ -105,6 +105,44 @@ function PostRoomSummary() {
             </div>
           )}
 
+          {/* Speaker Balance */}
+          {stateData.speakingTimes && Object.keys(stateData.speakingTimes).length > 0 && (() => {
+            const times = stateData.speakingTimes;
+            const maxTime = Math.max(...Object.values(times), 1);
+            const totalTime = Object.values(times).reduce((a, b) => a + b, 0) || 1;
+            const formatTime = (s) => s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`;
+            return (
+              <div className="card" style={{ marginBottom: '1.2rem' }}>
+                <h3 style={{ color: 'var(--text-primary)', fontWeight: 700, marginBottom: '1rem', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--speaking)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                  Speaker Balance
+                </h3>
+                {Object.entries(times)
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([name, seconds]) => (
+                    <div key={name} style={{ marginBottom: '0.7rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>{name}</span>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
+                          {formatTime(seconds)} ({Math.round((seconds / totalTime) * 100)}%)
+                        </span>
+                      </div>
+                      <div style={{ background: 'var(--card-border)', borderRadius: '4px', height: '8px', overflow: 'hidden' }}>
+                        <div style={{
+                          width: `${(seconds / maxTime) * 100}%`,
+                          background: 'var(--speaking)',
+                          height: '100%',
+                          borderRadius: '4px',
+                          transition: 'width 0.5s ease',
+                        }} />
+                      </div>
+                    </div>
+                  ))
+                }
+              </div>
+            );
+          })()}
+
           {/* Details */}
           <div className="card" style={{ marginBottom: '1.2rem' }}>
             <h3 style={{ color: 'var(--text-primary)', fontWeight: 700, marginBottom: '0.8rem', fontSize: '1rem' }}>Session Details</h3>

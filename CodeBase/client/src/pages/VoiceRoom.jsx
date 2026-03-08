@@ -42,8 +42,9 @@ function VoiceRoom() {
   const peerConnectionsRef = useRef({});
   const analyserIntervalsRef = useRef({});
   const joinTimeRef = useRef(Date.now());
+  const speakingTimeRef = useRef({});  // id → seconds of speaking time
 
-  // --- Volume detection ---
+  // --- Volume detection + speaking time tracking ---
   const setupVolumeDetection = (id, stream, setter) => {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -52,9 +53,11 @@ function VoiceRoom() {
       analyser.fftSize = 512;
       source.connect(analyser);
       const data = new Uint8Array(analyser.frequencyBinCount);
+      if (!speakingTimeRef.current[id]) speakingTimeRef.current[id] = 0;
       const intervalId = setInterval(() => {
         analyser.getByteFrequencyData(data);
         const avg = data.reduce((a, b) => a + b, 0) / data.length;
+        if (avg > 10) speakingTimeRef.current[id] += 0.1; // 100ms interval = 0.1s
         setter(avg > 10);
       }, 100);
       analyserIntervalsRef.current[id] = { intervalId, audioCtx: ctx };
@@ -301,8 +304,14 @@ function VoiceRoom() {
     localStreamRef.current?.getTracks().forEach(t => t.stop());
     Object.values(peerConnectionsRef.current).forEach(pc => pc.close());
     const transcripts = audioPipelineRef.current?.getTranscripts() || [];
+    // Build speaking time map with aliases
+    const speakingTimes = {};
+    speakingTimes[alias] = Math.round(speakingTimeRef.current['self'] || 0);
+    participants.forEach(p => {
+      speakingTimes[p.alias] = Math.round(speakingTimeRef.current[p.socketId] || 0);
+    });
     navigate(`/summary/${roomId}`, {
-      state: { room: roomData, duration: durationMin, participantCount: participants.length + 1, transcripts },
+      state: { room: roomData, duration: durationMin, participantCount: participants.length + 1, transcripts, speakingTimes },
     });
   };
 
