@@ -1,10 +1,5 @@
 import Room from '../models/Room.js';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import Groq from 'groq-sdk';
-
-const genAI = process.env.GEMINI_API_KEY
-  ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-  : null;
 
 const groq = process.env.GROQ_API_KEY
   ? new Groq({ apiKey: process.env.GROQ_API_KEY })
@@ -64,23 +59,6 @@ function buildFallbackSummary({ transcripts, topic, category, duration, particip
   if (!highlight) return opener;
 
   return `${opener} Transcript highlights included: ${highlight}`;
-}
-
-async function generateWithGemini(prompt) {
-  const modelNames = ['gemini-2.0-flash', 'gemini-1.5-flash'];
-
-  for (const modelName of modelNames) {
-    try {
-      const model = genAI.getGenerativeModel({ model: modelName });
-      const result = await model.generateContent(prompt);
-      const summary = result.response.text()?.trim();
-      if (summary) return { summary, modelName, raw: result };
-    } catch (error) {
-      console.warn(`Gemini generation failed for ${modelName}:`, error.message);
-    }
-  }
-
-  throw new Error('All Gemini model attempts failed');
 }
 
 async function generateWithGroq(prompt) {
@@ -155,32 +133,22 @@ ${trimmedTranscripts}
 
 Generate a concise 2-4 sentence summary of what was discussed. Focus on key topics and takeaways. Do NOT include any personal identifiers. Keep it neutral and informative. If the transcripts are too fragmented to summarize, say so briefly.`;
 
-    // Try Gemini first
-    if (genAI) {
-      try {
-        const { summary, modelName } = await generateWithGemini(prompt);
-        return res.json({ summary, provider: 'gemini', model: modelName });
-      } catch (geminiErr) {
-        console.warn('Gemini failed:', geminiErr.message);
-      }
-    }
-
-    // Try Groq as fallback
+    // Try Groq as primary provider
     if (groq) {
       try {
         const { summary, modelName } = await generateWithGroq(prompt);
         return res.json({ summary, provider: 'groq', model: modelName });
       } catch (groqErr) {
-        console.warn('Groq also failed:', groqErr.message);
+        console.warn('Groq failed:', groqErr.message);
       }
     }
 
-    // Both failed, return local fallback
-    console.warn('Both Gemini and Groq unavailable, using local fallback');
+    // fallback returned if groq failed
+    console.warn('Groq unavailable, using local fallback');
     res.json({
       summary: fallbackSummary,
       provider: 'local-fallback',
-      reason: 'AI providers unavailable. Using local transcript summary.',
+      reason: 'AI provider unavailable. Using local transcript summary.',
     });
   } catch (err) {
     console.error('AI summary error:', err);

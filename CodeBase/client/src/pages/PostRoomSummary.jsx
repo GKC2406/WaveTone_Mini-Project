@@ -112,9 +112,7 @@ function PostRoomSummary() {
                 </p>
               )}
               <p style={{ color: 'var(--text-tertiary)', fontSize: '0.72rem', marginTop: '0.6rem', fontStyle: 'italic' }}>
-                {aiMeta.provider === 'gemini'
-                  ? `Powered by Google Gemini (${aiMeta.model || 'unknown model'}). Based on speech-to-text transcripts — no audio stored.`
-                  : aiMeta.provider === 'groq'
+                {aiMeta.provider === 'groq'
                     ? `Powered by Groq (${aiMeta.model || 'llama-3.3-70b-versatile'}). Based on speech-to-text transcripts — no audio stored.`
                     : aiMeta.provider === 'local-fallback'
                       ? 'Generated from speech-to-text transcripts using the built-in fallback summary. No audio stored.'
