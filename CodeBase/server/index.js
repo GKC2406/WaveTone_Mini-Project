@@ -75,7 +75,7 @@ io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
   // ==================== JOIN ROOM ====================
-  socket.on('join-room', ({ roomId, alias }) => {
+  socket.on('join-room', async ({ roomId, alias }) => {
     const ip = _getIP(socket);
 
     // Check global ban first
@@ -86,6 +86,18 @@ io.on('connection', (socket) => {
 
     if (roomBannedIPs.has(roomId) && roomBannedIPs.get(roomId).has(ip)) {
       socket.emit('join-denied', { reason: 'You have been banned from this room.' });
+      return;
+    }
+
+    // Check if room exists in database
+    try {
+      const roomExists = await Room.findById(roomId);
+      if (!roomExists) {
+        socket.emit('room-error', { code: 'NOT_FOUND', error: 'Room has been destroyed or does not exist.' });
+        return;
+      }
+    } catch (err) {
+      socket.emit('room-error', { code: 'NOT_FOUND', error: 'Room not found.' });
       return;
     }
 
