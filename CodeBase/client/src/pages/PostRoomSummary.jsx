@@ -37,13 +37,15 @@ function PostRoomSummary() {
           participantCount: stateData.participantCount,
         })
           .then(data => {
+            console.log('AI Summary Response:', { summary: data.summary?.substring(0, 50) + '...', provider: data.provider, model: data.model, reason: data.reason });
             setAiSummary(data.summary || data.reason || null);
-            setAiMeta({ provider: data.provider || null, reason: data.reason || null });
+            setAiMeta({ provider: data.provider || null, reason: data.reason || null, model: data.model || null });
             setAiLoading(false);
           })
-          .catch(() => {
+          .catch((err) => {
+            console.error('AI Summary Error:', err);
             setAiSummary('AI summary is temporarily unavailable.');
-            setAiMeta({ provider: null, reason: 'The summary service could not be reached.' });
+            setAiMeta({ provider: null, reason: 'The summary service could not be reached.', model: null });
             setAiLoading(false);
           });
       }
@@ -111,12 +113,14 @@ function PostRoomSummary() {
               )}
               <p style={{ color: 'var(--text-tertiary)', fontSize: '0.72rem', marginTop: '0.6rem', fontStyle: 'italic' }}>
                 {aiMeta.provider === 'gemini'
-                  ? 'Powered by Google Gemini. Based on speech-to-text transcripts — no audio stored.'
-                  : aiMeta.provider === 'local-fallback'
-                    ? 'Generated from speech-to-text transcripts using the built-in fallback summary. No audio stored.'
-                    : 'Based on speech-to-text transcripts — no audio stored.'}
+                  ? `Powered by Google Gemini (${aiMeta.model || 'unknown model'}). Based on speech-to-text transcripts — no audio stored.`
+                  : aiMeta.provider === 'groq'
+                    ? `Powered by Groq (${aiMeta.model || 'llama-3.3-70b-versatile'}). Based on speech-to-text transcripts — no audio stored.`
+                    : aiMeta.provider === 'local-fallback'
+                      ? 'Generated from speech-to-text transcripts using the built-in fallback summary. No audio stored.'
+                      : 'Based on speech-to-text transcripts — no audio stored.'}
               </p>
-              {aiMeta.reason && aiMeta.provider !== 'gemini' && (
+              {aiMeta.reason && (
                 <p style={{ color: 'var(--text-tertiary)', fontSize: '0.72rem', marginTop: '0.35rem' }}>
                   {aiMeta.reason}
                 </p>
