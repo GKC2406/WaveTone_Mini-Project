@@ -14,6 +14,7 @@ export class AudioPipeline {
     this.recognition = null;
     this.isActive = true;
     this.transcripts = []; // collected final transcripts for AI summary
+    this.lastInterimTranscript = '';
   }
 
   async init() {
@@ -66,20 +67,26 @@ export class AudioPipeline {
     this.recognition.lang = 'en-US';
 
     this.recognition.onresult = (event) => {
+      let latestInterim = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
+        const cleanedTranscript = transcript?.replace(/\s+/g, ' ').trim() || '';
         // Check profanity on both interim and final results for faster detection
-        if (transcript && transcript.trim().length > 0 && containsProfanity(transcript)) {
+        if (cleanedTranscript.length > 0 && containsProfanity(cleanedTranscript)) {
           this._triggerMute();
-          this.onProfanityDetected?.(transcript);
-          console.log('AudioPipeline: Profanity detected:', transcript);
+          this.onProfanityDetected?.(cleanedTranscript);
+          console.log('AudioPipeline: Profanity detected:', cleanedTranscript);
           break;
         }
         // Collect final (non-interim) transcripts for AI summary
-        if (event.results[i].isFinal && transcript.trim().length > 2) {
-          this.transcripts.push(transcript.trim());
+        if (event.results[i].isFinal && cleanedTranscript.length > 2) {
+          this.transcripts.push(cleanedTranscript);
+          this.lastInterimTranscript = '';
+        } else if (cleanedTranscript.length > 2) {
+          latestInterim = cleanedTranscript;
         }
       }
+      if (latestInterim) this.lastInterimTranscript = latestInterim;
     };
 
     this.recognition.onerror = (event) => {
@@ -119,7 +126,15 @@ export class AudioPipeline {
   }
 
   getTranscripts() {
-    return this.transcripts;
+    const transcripts = [...this.transcripts];
+    const fallbackInterim = this.lastInterimTranscript.replace(/\s+/g, ' ').trim();
+
+    if (fallbackInterim.length > 2 && !transcripts.includes(fallbackInterim)) {
+      transcripts.push(fallbackInterim);
+    }
+
+    console.log('AudioPipeline: transcript count for summary', transcripts.length);
+    return transcripts;
   }
 
   destroy() {

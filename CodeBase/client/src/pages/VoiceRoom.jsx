@@ -314,10 +314,10 @@ function VoiceRoom() {
 
   const handleLeave = () => {
     const durationMin = Math.max(1, Math.round((Date.now() - joinTimeRef.current) / 60000));
+    const transcripts = audioPipelineRef.current?.getTranscripts() || [];
     socketRef.current?.emit('leave-room', { roomId });
     localStreamRef.current?.getTracks().forEach(t => t.stop());
     Object.values(peerConnectionsRef.current).forEach(pc => pc.close());
-    const transcripts = audioPipelineRef.current?.getTranscripts() || [];
     // Build speaking time map with aliases
     const speakingTimes = {};
     speakingTimes[alias] = Math.round(speakingTimeRef.current['self'] || 0);
