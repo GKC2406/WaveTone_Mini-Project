@@ -20,11 +20,18 @@ export class AudioPipeline {
     try {
       // Create audio processing graph
       this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      if (!this.audioContext.audioWorklet) {
+        throw new Error('AudioWorklet is not supported in this browser');
+      }
+      if (typeof this.audioContext.createMediaStreamDestination !== 'function') {
+        throw new Error('MediaStreamDestination is not supported in this browser');
+      }
+
       await this.audioContext.audioWorklet.addModule('/profanity-worklet.js');
 
       this.sourceNode = this.audioContext.createMediaStreamSource(this.rawStream);
       this.workletNode = new AudioWorkletNode(this.audioContext, 'profanity-gate');
-      this.destinationNode = this.audioContext.createMediaStreamAudioDestination();
+      this.destinationNode = this.audioContext.createMediaStreamDestination();
 
       // Wire: mic → worklet (ring buffer + gate) → destination
       this.sourceNode.connect(this.workletNode);
