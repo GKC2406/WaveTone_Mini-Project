@@ -1,3 +1,11 @@
+# Moderation Model (2026 Upgrade)
+
+- The first participant in a room is always assigned as Host. Only the Host can directly kick other users.
+- Vote kick is only available when there are 3 or more participants in the room. This prevents unfair removal of the Host or sole participant in small rooms.
+- Normal users cannot directly kick others; they can only initiate a vote kick if eligible.
+- If there are only 2 participants, vote kick is disabled.
+- Warning system and IP ban logic remain as previously described.
+
 =>>>Idea/Use Cases=>>>
 1 Anonymous voice rooms with no persistent user identity, / Room Management: Create, join, and leave voice chat rooms.
 2 Real-time audio communication using WebRTC

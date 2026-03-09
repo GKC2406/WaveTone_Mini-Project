@@ -1,3 +1,7 @@
+# Moderation Upgrades (2026)
+
+- Vote kick is now only available when there are 3 or more participants in a room. This prevents unfair kicks in small rooms and ensures the Host cannot be removed in a 2-person room.
+- Host transfer (future): If the Host leaves, auto-assign a new Host from remaining participants.
 =>>> Additional Non-Generic Enhancements for WaveTone =>>>
 
 4> What More Can Be Added (Still Non-Generic)

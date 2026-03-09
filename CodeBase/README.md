@@ -4,6 +4,7 @@ A modern, **anonymous voice room platform** built with cutting-edge web technolo
 
 ---
 
+
 ## Features
 
 - **Anonymous Voice Rooms** -- Connect with others without revealing identity; temporary aliases (Echo, Wave, Drift, etc.)
@@ -11,7 +12,8 @@ A modern, **anonymous voice room platform** built with cutting-edge web technolo
 - **Audio Buffer Pipeline** -- 400ms AudioWorklet ring buffer with profanity gate; SpeechRecognition detects profanity in real-time and mutes offending segments before they reach peers
 - **Profanity Filter** -- Leet-speak aware regex matching on room topics, categories, and aliases; real-time speech detection via Web Speech API
 - **Warning System** -- 3 profanity strikes with rate-limiting; auto-kick + IP ban at threshold
-- **Vote-Kick** -- 70% participant threshold, 30-second timeout, progress bar UI
+- **Vote-Kick (3+ participants only)** -- 70% participant threshold, 30-second timeout, progress bar UI. Vote kick is only available when there are at least 3 participants in the room, preventing unfair kicks in small rooms.
+- **Host-Only Kick** -- Only the Host (first participant) can directly kick others. Normal users can only initiate a vote kick (if eligible).
 - **IP-Based Room Bans** -- Kicked users are banned from rejoining the same room
 - **AI Conversation Summary** -- Google Gemini generates post-session summaries from collected transcripts
 - **Speaker Balance** -- Per-participant speaking time tracked via AnalyserNode; shown with progress bars on summary page
@@ -20,6 +22,27 @@ A modern, **anonymous voice room platform** built with cutting-edge web technolo
 - **Dark & Light Themes** -- Glassmorphic UI with smooth transitions and accessible colors
 - **Responsive Design** -- Works across desktop and mobile browsers
 - **Auto-Destroy Rooms** -- Rooms deactivate in MongoDB when last participant leaves
+
+---
+
+## Moderation Model (Upgraded)
+
+- **Host Role:** The first participant in a room is assigned as Host and has the exclusive ability to directly kick any other participant.
+- **Vote Kick:** Only available when there are 3 or more participants. Requires 70% of non-target users to vote 'yes' within 30 seconds. Not available in 2-person rooms to prevent unfair removal of the Host or sole participant.
+- **Warning System:** Profanity or disruptive behavior triggers warnings. 3 warnings result in auto-kick and IP ban for the session.
+- **IP Ban:** Kicked or auto-kicked users are banned from rejoining the same room for the session duration.
+
+---
+
+## Known Limitations
+
+- **Vote Kick Unavailable in Small Rooms:** Vote kick is disabled for rooms with fewer than 3 participants.
+- **Host Cannot Be Vote-Kicked in 2-Person Rooms:** The Host is protected from unfair removal in small rooms.
+- **Browser Compatibility:** AudioWorklet and SpeechRecognition may not be supported in all browsers (e.g., Firefox, some mobile browsers).
+- **No Mobile App:** Currently web-only; mobile browser support is prioritized.
+- **No Host Transfer:** If the Host leaves, there is currently no auto-assignment of a new Host (future enhancement).
+
+---
 
 ---
 

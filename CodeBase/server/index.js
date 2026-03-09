@@ -22,7 +22,11 @@ const io = new SocketIOServer(server, {
   }
 });
 
-app.use(cors());
+app.use(cors({
+  origin: 'https://wave-tone-mini-project.vercel.app',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+}));
 app.use(express.json());
 
 // API routes
