@@ -74,7 +74,7 @@ async function generateWithGemini(prompt) {
       const model = genAI.getGenerativeModel({ model: modelName });
       const result = await model.generateContent(prompt);
       const summary = result.response.text()?.trim();
-      if (summary) return { summary, modelName };
+      if (summary) return { summary, modelName, raw: result };
     } catch (error) {
       console.warn(`Gemini generation failed for ${modelName}:`, error.message);
     }
@@ -91,14 +91,18 @@ async function generateWithGroq(prompt) {
       max_tokens: 300,
       temperature: 0.6,
     });
-    const summary = message.choices[0]?.message?.content?.trim();
-    if (summary) return { summary, modelName: 'groq/llama-3.3-70b' };
+    const raw = message;
+    const summary = message.choices?.[0]?.message?.content?.trim();
+    if (summary) return { summary, modelName: 'groq/llama-3.3-70b', raw };
   } catch (error) {
     console.warn('Groq generation failed:', error.message);
   }
 
   throw new Error('Groq generation failed');
 }
+
+// Exported helpers for debug route
+export { normalizeTranscripts, buildFallbackSummary, generateWithGemini, generateWithGroq };
 
 export const getSessionSummary = async (req, res) => {
   try {
