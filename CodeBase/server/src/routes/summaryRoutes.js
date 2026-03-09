@@ -12,7 +12,7 @@ router.post('/:id/ai-debug', async (req, res) => {
 	try {
 		// Lazy-import controller helpers to avoid circular deps
 		const ctrl = await import('../controllers/summaryController.js');
-		const { normalizeTranscripts, buildFallbackSummary, generateWithGemini, generateWithGroq } = ctrl;
+		const { normalizeTranscripts, buildFallbackSummary, generateWithGroq } = ctrl;
 		const { transcripts = [], topic, category, duration, participantCount } = req.body;
 
 		const cleaned = normalizeTranscripts(transcripts);
@@ -22,14 +22,6 @@ router.post('/:id/ai-debug', async (req, res) => {
 		const prompt = `You are summarizing an anonymous voice room conversation from WaveTone.\n\nRoom topic: \"${topic || 'General'}\"\nCategory: ${category || 'General'}\nDuration: ${duration || '?'} minutes\nParticipants: ${participantCount || '?'}\n\nTranscripts:\n${trimmed}\n\nProvide a concise summary.`;
 
 		const result = { fallback };
-
-		// Try Gemini if available
-		try {
-			const gem = await generateWithGemini(prompt);
-			result.gemini = gem;
-		} catch (e) {
-			result.gemini = { error: e.message };
-		}
 
 		// Try Groq if available
 		try {

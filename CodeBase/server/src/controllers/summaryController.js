@@ -80,7 +80,7 @@ async function generateWithGroq(prompt) {
 }
 
 // Exported helpers for debug route
-export { normalizeTranscripts, buildFallbackSummary, generateWithGemini, generateWithGroq };
+export { normalizeTranscripts, buildFallbackSummary, generateWithGroq };
 
 export const getSessionSummary = async (req, res) => {
   try {
