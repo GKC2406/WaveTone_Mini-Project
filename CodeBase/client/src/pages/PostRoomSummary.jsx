@@ -12,6 +12,7 @@ function PostRoomSummary() {
   const [loading, setLoading] = useState(!stateData.room);
   const [aiSummary, setAiSummary] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiMeta, setAiMeta] = useState({ provider: null, reason: null });
 
   useEffect(() => { document.title = 'Session Summary - WaveTone'; }, []);
 
@@ -37,9 +38,14 @@ function PostRoomSummary() {
         })
           .then(data => {
             setAiSummary(data.summary || data.reason || null);
+            setAiMeta({ provider: data.provider || null, reason: data.reason || null });
             setAiLoading(false);
           })
-          .catch(() => setAiLoading(false));
+          .catch(() => {
+            setAiSummary('AI summary is temporarily unavailable.');
+            setAiMeta({ provider: null, reason: 'The summary service could not be reached.' });
+            setAiLoading(false);
+          });
       }
       return;
     }
@@ -104,8 +110,17 @@ function PostRoomSummary() {
                 </p>
               )}
               <p style={{ color: 'var(--text-tertiary)', fontSize: '0.72rem', marginTop: '0.6rem', fontStyle: 'italic' }}>
-                Powered by Google Gemini. Based on speech-to-text transcripts — no audio stored.
+                {aiMeta.provider === 'gemini'
+                  ? 'Powered by Google Gemini. Based on speech-to-text transcripts — no audio stored.'
+                  : aiMeta.provider === 'local-fallback'
+                    ? 'Generated from speech-to-text transcripts using the built-in fallback summary. No audio stored.'
+                    : 'Based on speech-to-text transcripts — no audio stored.'}
               </p>
+              {aiMeta.reason && aiMeta.provider !== 'gemini' && (
+                <p style={{ color: 'var(--text-tertiary)', fontSize: '0.72rem', marginTop: '0.35rem' }}>
+                  {aiMeta.reason}
+                </p>
+              )}
             </div>
           )}
 
