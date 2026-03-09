@@ -23,7 +23,7 @@ function VoiceRoom() {
   useEffect(() => { document.title = roomData.topic ? `${roomData.topic} - WaveTone` : 'Voice Room - WaveTone'; }, [roomData.topic]);
 
   const [participants, setParticipants] = useState([]);
-  const [muted, setMuted] = useState(false);
+  const [muted, setMuted] = useState(true);
   const [showManage, setShowManage] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [speakingStates, setSpeakingStates] = useState({});
@@ -141,6 +141,8 @@ function VoiceRoom() {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         if (!active) { stream.getTracks().forEach(t => t.stop()); return; }
         localStreamRef.current = stream;
+        // Mute mic by default
+        stream.getAudioTracks().forEach(track => { track.enabled = false; });
         setupVolumeDetection('self', stream, setSelfSpeaking);
 
         // Set up audio profanity pipeline if room has filter enabled
@@ -308,8 +310,12 @@ function VoiceRoom() {
   }, [roomId, alias, createPeerConnection, navigate]);
 
   const handleMuteToggle = () => {
-    localStreamRef.current?.getAudioTracks().forEach(t => { t.enabled = muted; });
-    setMuted(m => !m);
+    // Toggle mic state
+    setMuted(m => {
+      const newMuted = !m;
+      localStreamRef.current?.getAudioTracks().forEach(t => { t.enabled = !newMuted; });
+      return newMuted;
+    });
   };
 
   const handleLeave = () => {
