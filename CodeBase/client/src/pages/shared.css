@@ -1,3 +1,51 @@
+/* Home button styles for better INP */
+.home-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.7rem 1.4rem;
+  border-radius: 8px;
+  border: none;
+  background: var(--card-border);
+  color: var(--text-primary);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  cursor: pointer;
+  transition: background 0.18s cubic-bezier(0.4,0,0.2,1), color 0.18s, box-shadow 0.18s;
+  will-change: background, color, box-shadow, transform;
+  outline: none;
+  user-select: none;
+}
+.home-btn:active {
+  background: var(--speaking);
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(56,189,248,0.18);
+  transform: scale(0.97);
+}
+.home-btn-solid {
+  background: var(--speaking);
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(56,189,248,0.18);
+}
+.home-btn-solid:hover, .home-btn-solid:focus {
+  background: #0ea5e9;
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(56,189,248,0.22);
+  transform: translateY(-2px) scale(1.03);
+}
+.home-btn-outline {
+  background: transparent;
+  color: var(--speaking);
+  border: 1.5px solid var(--speaking);
+  box-shadow: none;
+}
+.home-btn-outline:hover, .home-btn-outline:focus {
+  background: rgba(56,189,248,0.08);
+  color: #0ea5e9;
+  border-color: #0ea5e9;
+  transform: translateY(-2px) scale(1.03);
+}
 /* ===== SHARED PAGE STYLES ===== */
 
 /* Page section wrapper */
