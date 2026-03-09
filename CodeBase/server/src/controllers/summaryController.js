@@ -1,9 +1,104 @@
 import Room from '../models/Room.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 
 const genAI = process.env.GEMINI_API_KEY
   ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
   : null;
+
+const groq = process.env.GROQ_API_KEY
+  ? new Groq({ apiKey: process.env.GROQ_API_KEY })
+  : null;
+
+const STOP_WORDS = new Set([
+  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'been', 'but', 'by', 'for', 'from',
+  'had', 'has', 'have', 'he', 'her', 'his', 'i', 'if', 'in', 'is', 'it', 'its',
+  'me', 'my', 'of', 'on', 'or', 'our', 'she', 'that', 'the', 'their', 'them',
+  'there', 'they', 'this', 'to', 'was', 'we', 'were', 'will', 'with', 'you', 'your',
+]);
+
+function normalizeTranscripts(transcripts) {
+  if (!Array.isArray(transcripts)) return [];
+
+  return transcripts
+    .filter((entry) => typeof entry === 'string')
+    .map((entry) => entry.replace(/\s+/g, ' ').trim())
+    .filter((entry) => entry.length > 2)
+    .slice(0, 100);
+}
+
+function buildFallbackSummary({ transcripts, topic, category, duration, participantCount }) {
+  const cleaned = normalizeTranscripts(transcripts);
+  if (cleaned.length === 0) return null;
+
+  const uniqueSnippets = [];
+  cleaned.forEach((entry) => {
+    if (!uniqueSnippets.includes(entry)) uniqueSnippets.push(entry);
+  });
+
+  const keywordCounts = new Map();
+  cleaned
+    .join(' ')
+    .toLowerCase()
+    .match(/[a-z]{4,}/g)?.forEach((word) => {
+      if (STOP_WORDS.has(word)) return;
+      keywordCounts.set(word, (keywordCounts.get(word) || 0) + 1);
+    });
+
+  const keywords = [...keywordCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([word]) => word);
+
+  const topicPart = topic ? ` about "${topic}"` : '';
+  const categoryPart = category && category !== 'General' ? `${category.toLowerCase()} ` : '';
+  const durationPart = duration ? ` over roughly ${duration} minute(s)` : '';
+  const participantPart = participantCount ? ` with ${participantCount} participant(s)` : '';
+  const opener = `This ${categoryPart}conversation${topicPart}${durationPart}${participantPart} focused on ${keywords.length > 0 ? keywords.join(', ') : 'several shared discussion points'}.`;
+
+  const highlight = uniqueSnippets
+    .slice(0, 2)
+    .map((entry) => entry.length > 120 ? `${entry.slice(0, 117)}...` : entry)
+    .join(' ');
+
+  if (!highlight) return opener;
+
+  return `${opener} Transcript highlights included: ${highlight}`;
+}
+
+async function generateWithGemini(prompt) {
+  const modelNames = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+
+  for (const modelName of modelNames) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const result = await model.generateContent(prompt);
+      const summary = result.response.text()?.trim();
+      if (summary) return { summary, modelName };
+    } catch (error) {
+      console.warn(`Gemini generation failed for ${modelName}:`, error.message);
+    }
+  }
+
+  throw new Error('All Gemini model attempts failed');
+}
+
+async function generateWithGroq(prompt) {
+  try {
+    const message = await groq.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      model: 'mixtral-8x7b-32768',
+      max_tokens: 300,
+      temperature: 0.6,
+    });
+    const summary = message.choices[0]?.message?.content?.trim();
+    if (summary) return { summary, modelName: 'groq/mixtral-8x7b' };
+  } catch (error) {
+    console.warn('Groq generation failed:', error.message);
+  }
+
+  throw new Error('Groq generation failed');
+}
 
 export const getSessionSummary = async (req, res) => {
   try {
@@ -26,19 +121,44 @@ export const getSessionSummary = async (req, res) => {
 export const generateAISummary = async (req, res) => {
   try {
     const { transcripts, topic, category, duration, participantCount } = req.body;
+    const cleanedTranscripts = normalizeTranscripts(transcripts);
+    const fallbackSummary = buildFallbackSummary({
+      transcripts: cleanedTranscripts,
+      topic,
+      category,
+      duration,
+      participantCount,
+    });
 
-    if (!transcripts || transcripts.length === 0) {
+    if (cleanedTranscripts.length === 0) {
       return res.json({ summary: null, reason: 'No transcript data available.' });
     }
 
     if (!genAI) {
-      return res.json({ summary: null, reason: 'AI summary not configured (GEMINI_API_KEY missing).' });
+      // Gemini not available, try Groq
+      if (groq) {
+        try {
+          const { summary, modelName } = await generateWithGroq(prompt);
+          return res.json({ summary, provider: 'groq', model: modelName });
+        } catch (groqErr) {
+          console.warn('Groq also failed, using fallback:', groqErr.message);
+          return res.json({
+            summary: fallbackSummary,
+            provider: 'local-fallback',
+            reason: 'AI summary used the built-in fallback because Gemini and Groq are unavailable.',
+          });
+        }
+      }
+
+      return res.json({
+        summary: fallbackSummary,
+        provider: 'local-fallback',
+        reason: 'AI summary used the built-in fallback because GEMINI_API_KEY and GROQ_API_KEY are missing.',
+      });
     }
 
     // Limit transcript size to prevent abuse (max ~2000 words)
-    const trimmedTranscripts = transcripts.slice(0, 100).join('\n');
-
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const trimmedTranscripts = cleanedTranscripts.join('\n');
 
     const prompt = `You are summarizing an anonymous voice room conversation from WaveTone.
 
@@ -54,12 +174,55 @@ ${trimmedTranscripts}
 
 Generate a concise 2-4 sentence summary of what was discussed. Focus on key topics and takeaways. Do NOT include any personal identifiers. Keep it neutral and informative. If the transcripts are too fragmented to summarize, say so briefly.`;
 
-    const result = await model.generateContent(prompt);
-    const summary = result.response.text();
+    const { summary, modelName } = await generateWithGemini(prompt);
 
-    res.json({ summary });
+    res.json({ summary, provider: 'gemini', model: modelName });
   } catch (err) {
-    console.error('AI summary error:', err.message);
-    res.json({ summary: null, reason: 'AI summary generation failed.' });
+    // Gemini failed, try Groq
+    if (groq) {
+      try {
+        const { transcripts, topic, category, duration, participantCount } = req.body;
+        const cleanedTranscripts = normalizeTranscripts(transcripts);
+        const trimmedTranscripts = cleanedTranscripts.join('\n');
+
+        const prompt = `You are summarizing an anonymous voice room conversation from WaveTone.
+
+Room topic: "${topic || 'General'}"
+Category: ${category || 'General'}
+Duration: ${duration || '?'} minutes
+Participants: ${participantCount || '?'}
+
+Below are speech-to-text transcripts captured during the session. They may be incomplete or contain recognition errors.
+
+Transcripts:
+${trimmedTranscripts}
+
+Generate a concise 2-4 sentence summary of what was discussed. Focus on key topics and takeaways. Do NOT include any personal identifiers. Keep it neutral and informative. If the transcripts are too fragmented to summarize, say so briefly.`;
+
+        const { summary, modelName } = await generateWithGroq(prompt);
+        return res.json({ summary, provider: 'groq', model: modelName });
+      } catch (groqErr) {
+        console.error('Groq also failed:', groqErr.message);
+      }
+    }
+
+    // Both Gemini and Groq failed, use local fallback
+    const { transcripts, topic, category, duration, participantCount } = req.body;
+    const fallbackSummary = buildFallbackSummary({
+      transcripts,
+      topic,
+      category,
+      duration,
+      participantCount,
+    });
+
+    console.error('AI summary error:', err);
+    res.json({
+      summary: fallbackSummary,
+      provider: fallbackSummary ? 'local-fallback' : null,
+      reason: fallbackSummary
+        ? 'AI services unavailable, used transcript-based fallback summary.'
+        : 'AI summary generation failed.',
+    });
   }
 };

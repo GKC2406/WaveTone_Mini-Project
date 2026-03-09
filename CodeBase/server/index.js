@@ -39,10 +39,12 @@ app.use('/api/sessions', summaryRoutes);
 const roomParticipants = new Map();  // roomId → [{socketId, alias}]
 const socketAliases = new Map();     // socketId → alias
 const roomBannedIPs = new Map();     // roomId → Set<ip>
+const globalBannedIPs = new Set();   // Global IPs banned from all rooms (persistent across sessions)
 const socketWarnings = new Map();    // socketId → { count, lastTimestamp }
 const activeVotes = new Map();       // roomId → { targetSocketId, targetAlias, initiatorAlias, votes: Set, startTime, timeout }
 
 const MAX_WARNINGS = 3;
+const WARNING_AUTO_VOTE_THRESHOLD = 2; // Auto-start vote-kick after 2 warnings
 const WARNING_RATE_LIMIT_MS = 2000;
 const VOTE_TIMEOUT_MS = 30000;
 const VOTE_THRESHOLD = 0.7;
@@ -52,10 +54,14 @@ function _getIP(socket) {
     || socket.handshake.address;
 }
 
-function _banAndKick(socket, roomId, reason) {
+function _banAndKick(socket, roomId, reason, isGlobalBan = false) {
   const ip = _getIP(socket);
   if (!roomBannedIPs.has(roomId)) roomBannedIPs.set(roomId, new Set());
   roomBannedIPs.get(roomId).add(ip);
+  if (isGlobalBan) {
+    globalBannedIPs.add(ip);
+    console.log(`IP ${ip} added to global ban list`);
+  }
   socket.emit('kicked', { reason });
   _leaveRoom(socket, roomId);
 }
@@ -67,6 +73,12 @@ io.on('connection', (socket) => {
   // ==================== JOIN ROOM ====================
   socket.on('join-room', ({ roomId, alias }) => {
     const ip = _getIP(socket);
+
+    // Check global ban first
+    if (globalBannedIPs.has(ip)) {
+      socket.emit('join-denied', { reason: 'You have been globally banned from WaveTone.' });
+      return;
+    }
 
     if (roomBannedIPs.has(roomId) && roomBannedIPs.get(roomId).has(ip)) {
       socket.emit('join-denied', { reason: 'You have been banned from this room.' });
@@ -148,11 +160,52 @@ io.on('connection', (socket) => {
 
     socket.emit('warning-issued', { count: record.count, maxWarnings: MAX_WARNINGS });
 
-    // Auto-kick at threshold
+    // Auto-start vote-kick at WARNING_AUTO_VOTE_THRESHOLD (2 warnings)
+    if (record.count === WARNING_AUTO_VOTE_THRESHOLD) {
+      const participants = roomParticipants.get(roomId);
+      if (participants && participants.length >= 3) {
+        const targetAlias = socketAliases.get(socket.id) || 'Anonymous';
+        const initiatorAlias = 'System';
+        const totalVoters = participants.length - 1;
+
+        if (!activeVotes.has(roomId)) {
+          const voteSession = {
+            targetSocketId: socket.id,
+            targetAlias,
+            initiatorAlias,
+            votes: new Set(),
+            timeout: null,
+          };
+
+          voteSession.timeout = setTimeout(() => {
+            if (activeVotes.has(roomId)) {
+              io.to(roomId).emit('vote-kick-ended', {
+                targetSocketId: socket.id, targetAlias,
+                result: 'failed', reason: 'Vote timed out.',
+              });
+              activeVotes.delete(roomId);
+            }
+          }, VOTE_TIMEOUT_MS);
+
+          activeVotes.set(roomId, voteSession);
+          const requiredVotes = Math.ceil(totalVoters * VOTE_THRESHOLD);
+
+          io.to(roomId).emit('vote-kick-active', {
+            targetSocketId: socket.id, targetAlias, initiatorAlias,
+            currentVotes: 0, requiredVotes, totalVoters,
+            timeoutSeconds: VOTE_TIMEOUT_MS / 1000,
+          });
+
+          console.log(`Auto vote-kick started (system) against ${targetAlias} after ${WARNING_AUTO_VOTE_THRESHOLD} warnings in room ${roomId}`);
+        }
+      }
+    }
+
+    // Auto-kick at MAX_WARNINGS threshold (3 warnings) with global ban
     if (record.count >= MAX_WARNINGS) {
-      console.log(`Auto-kicking ${socket.id} after ${MAX_WARNINGS} profanity warnings`);
+      console.log(`Auto-kicking ${socket.id} after ${MAX_WARNINGS} profanity warnings (global ban)`);
       socketWarnings.delete(socket.id);
-      _banAndKick(socket, roomId, `Removed after ${MAX_WARNINGS} profanity warnings.`);
+      _banAndKick(socket, roomId, `Removed after ${MAX_WARNINGS} profanity warnings.`, true);
     }
   });
 
