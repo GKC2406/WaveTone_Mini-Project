@@ -68,14 +68,16 @@ export class AudioPipeline {
     this.recognition.onresult = (event) => {
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
+        // Check profanity on both interim and final results for faster detection
+        if (transcript && transcript.trim().length > 0 && containsProfanity(transcript)) {
+          this._triggerMute();
+          this.onProfanityDetected?.(transcript);
+          console.log('AudioPipeline: Profanity detected:', transcript);
+          break;
+        }
         // Collect final (non-interim) transcripts for AI summary
         if (event.results[i].isFinal && transcript.trim().length > 2) {
           this.transcripts.push(transcript.trim());
-        }
-        if (containsProfanity(transcript)) {
-          this._triggerMute();
-          this.onProfanityDetected?.(transcript);
-          break;
         }
       }
     };
@@ -108,11 +110,12 @@ export class AudioPipeline {
   _restartRecognition() {
     if (!this.isActive) return;
     try { this.recognition?.stop(); } catch { /* already stopped */ }
+    // Reduce restart delay from 300ms to 100ms for faster re-detection
     setTimeout(() => {
       if (this.isActive && this.recognition) {
         try { this.recognition.start(); } catch { /* may fail if already running */ }
       }
-    }, 300);
+    }, 100);
   }
 
   getTranscripts() {

@@ -130,34 +130,13 @@ export const generateAISummary = async (req, res) => {
       participantCount,
     });
 
+    // Always return fallback as base message
     if (cleanedTranscripts.length === 0) {
-      return res.json({ summary: null, reason: 'No transcript data available.' });
+      return res.json({ summary: fallbackSummary, provider: 'local-fallback', reason: 'No transcript data available.' });
     }
 
-    if (!genAI) {
-      // Gemini not available, try Groq
-      if (groq) {
-        try {
-          const { summary, modelName } = await generateWithGroq(prompt);
-          return res.json({ summary, provider: 'groq', model: modelName });
-        } catch (groqErr) {
-          console.warn('Groq also failed, using fallback:', groqErr.message);
-          return res.json({
-            summary: fallbackSummary,
-            provider: 'local-fallback',
-          });
-        }
-      }
-
-      return res.json({
-        summary: fallbackSummary,
-        provider: 'local-fallback',
-      });
-    }
-
-    // Limit transcript size to prevent abuse (max ~2000 words)
+    // Build prompt for AI models
     const trimmedTranscripts = cleanedTranscripts.join('\n');
-
     const prompt = `You are summarizing an anonymous voice room conversation from WaveTone.
 
 Room topic: "${topic || 'General'}"
@@ -172,52 +151,39 @@ ${trimmedTranscripts}
 
 Generate a concise 2-4 sentence summary of what was discussed. Focus on key topics and takeaways. Do NOT include any personal identifiers. Keep it neutral and informative. If the transcripts are too fragmented to summarize, say so briefly.`;
 
-    const { summary, modelName } = await generateWithGemini(prompt);
-
-    res.json({ summary, provider: 'gemini', model: modelName });
-  } catch (err) {
-    // Gemini failed, try Groq
-    if (groq) {
+    // Try Gemini first
+    if (genAI) {
       try {
-        const { transcripts, topic, category, duration, participantCount } = req.body;
-        const cleanedTranscripts = normalizeTranscripts(transcripts);
-        const trimmedTranscripts = cleanedTranscripts.join('\n');
-
-        const prompt = `You are summarizing an anonymous voice room conversation from WaveTone.
-
-Room topic: "${topic || 'General'}"
-Category: ${category || 'General'}
-Duration: ${duration || '?'} minutes
-Participants: ${participantCount || '?'}
-
-Below are speech-to-text transcripts captured during the session. They may be incomplete or contain recognition errors.
-
-Transcripts:
-${trimmedTranscripts}
-
-Generate a concise 2-4 sentence summary of what was discussed. Focus on key topics and takeaways. Do NOT include any personal identifiers. Keep it neutral and informative. If the transcripts are too fragmented to summarize, say so briefly.`;
-
-        const { summary, modelName } = await generateWithGroq(prompt);
-        return res.json({ summary, provider: 'groq', model: modelName });
-      } catch (groqErr) {
-        console.error('Groq also failed:', groqErr.message);
+        const { summary, modelName } = await generateWithGemini(prompt);
+        return res.json({ summary, provider: 'gemini', model: modelName });
+      } catch (geminiErr) {
+        console.warn('Gemini failed:', geminiErr.message);
       }
     }
 
-    // Both Gemini and Groq failed, use local fallback
-    const { transcripts, topic, category, duration, participantCount } = req.body;
-    const fallbackSummary = buildFallbackSummary({
-      transcripts,
-      topic,
-      category,
-      duration,
-      participantCount,
-    });
+    // Try Groq as fallback
+    if (groq) {
+      try {
+        const { summary, modelName } = await generateWithGroq(prompt);
+        return res.json({ summary, provider: 'groq', model: modelName });
+      } catch (groqErr) {
+        console.warn('Groq also failed:', groqErr.message);
+      }
+    }
 
-    console.error('AI summary error:', err);
+    // Both failed, return local fallback
+    console.warn('Both Gemini and Groq unavailable, using local fallback');
     res.json({
       summary: fallbackSummary,
-      provider: fallbackSummary ? 'local-fallback' : null,
+      provider: 'local-fallback',
+      reason: 'AI providers unavailable. Using local transcript summary.',
+    });
+  } catch (err) {
+    console.error('AI summary error:', err);
+    res.json({
+      summary: 'Summary generated from speech-to-text transcripts.',
+      provider: 'local-fallback',
+      reason: 'Error generating summary. Using local fallback.',
     });
   }
 };

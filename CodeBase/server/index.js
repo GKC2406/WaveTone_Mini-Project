@@ -49,7 +49,7 @@ const activeVotes = new Map();       // roomId → { targetSocketId, targetAlias
 
 const MAX_WARNINGS = 3;
 const WARNING_AUTO_VOTE_THRESHOLD = 2; // Auto-start vote-kick after 2 warnings
-const WARNING_RATE_LIMIT_MS = 2000;
+const WARNING_RATE_LIMIT_MS = 500; // Reduced from 2000ms for faster detection
 const VOTE_TIMEOUT_MS = 30000;
 const VOTE_THRESHOLD = 0.7;
 
