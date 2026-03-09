@@ -87,12 +87,12 @@ async function generateWithGroq(prompt) {
   try {
     const message = await groq.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
-      model: 'mixtral-8x7b-32768',
+      model: 'llama-3.3-70b-versatile',
       max_tokens: 300,
       temperature: 0.6,
     });
     const summary = message.choices[0]?.message?.content?.trim();
-    if (summary) return { summary, modelName: 'groq/mixtral-8x7b' };
+    if (summary) return { summary, modelName: 'groq/llama-3.3-70b' };
   } catch (error) {
     console.warn('Groq generation failed:', error.message);
   }
@@ -145,7 +145,6 @@ export const generateAISummary = async (req, res) => {
           return res.json({
             summary: fallbackSummary,
             provider: 'local-fallback',
-            reason: 'AI summary used the built-in fallback because Gemini and Groq are unavailable.',
           });
         }
       }
@@ -153,7 +152,6 @@ export const generateAISummary = async (req, res) => {
       return res.json({
         summary: fallbackSummary,
         provider: 'local-fallback',
-        reason: 'AI summary used the built-in fallback because GEMINI_API_KEY and GROQ_API_KEY are missing.',
       });
     }
 
@@ -220,9 +218,6 @@ Generate a concise 2-4 sentence summary of what was discussed. Focus on key topi
     res.json({
       summary: fallbackSummary,
       provider: fallbackSummary ? 'local-fallback' : null,
-      reason: fallbackSummary
-        ? 'AI services unavailable, used transcript-based fallback summary.'
-        : 'AI summary generation failed.',
     });
   }
 };
