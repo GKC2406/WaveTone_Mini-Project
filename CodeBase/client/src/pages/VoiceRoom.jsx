@@ -178,6 +178,18 @@ function VoiceRoom() {
         navigate('/browse', { state: { error: reason } });
       });
 
+        // Room destroyed or NOT_FOUND error
+        socket.on('room-error', ({ code, error }) => {
+          if (!active) return;
+          if (code === 'NOT_FOUND') {
+            // Redirect to 404 page if route exists, else to app domain
+            navigate('/404');
+          } else {
+            // fallback: redirect to app domain
+            window.location.href = 'https://wave-tone-mini-project.vercel.app/';
+          }
+        });
+
       // Current room users
       socket.on('room-users', (users) => {
         if (!active) return;
