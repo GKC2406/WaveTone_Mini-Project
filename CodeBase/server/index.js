@@ -8,7 +8,7 @@ import roomRoutes from './src/routes/roomRoutes.js';
 import roomDetailsRoutes from './src/routes/roomDetailsRoutes.js';
 import summaryRoutes from './src/routes/summaryRoutes.js';
 import Room from './src/models/Room.js';
-import { containsProfanity, filterProfanity } from './src/utils/profanityFilter.js';
+import { containsProfanity, filterProfanity, extractProfanityWords, getProfanityWords } from './src/utils/profanityFilter.js';
 
 dotenv.config();
 connectDB();
@@ -223,6 +223,35 @@ io.on('connection', (socket) => {
       socketWarnings.delete(socket.id);
       _banAndKick(socket, roomId, `Removed after ${MAX_WARNINGS} profanity warnings.`, true);
     }
+  });
+
+  // ==================== HYBRID MODERATION: SERVER-SIDE VERIFICATION ====================
+  socket.on('check-profanity-server', ({ transcript, wordTimings, clientDetected, timestamp }, callback) => {
+    // Server-side profanity check for hybrid moderation
+    // This verifies the client's detection with independent server logic
+    
+    if (!transcript || transcript.length === 0) {
+      callback?.({ isProfane: false, confidence: 0, reason: 'Empty transcript' });
+      return;
+    }
+
+    const hasProfanity = containsProfanity(transcript);
+    const badWords = hasProfanity ? extractProfanityWords(transcript) : [];
+    
+    // Calculate confidence based on word match strength
+    const confidence = hasProfanity ? Math.min(1, badWords.length / Math.max(1, transcript.split(/\s+/).length)) : 0;
+
+    console.log(`[Server Moderation] Transcript: "${transcript}", Profane: ${hasProfanity}, Confidence: ${confidence.toFixed(2)}, BadWords: [${badWords.join(', ')}]`);
+
+    // Send result back to client
+    callback?.({
+      isProfane: hasProfanity,
+      badWords: badWords,
+      confidence: confidence,
+      wordTimings: wordTimings,
+      serverTimestamp: Date.now(),
+      latency: Date.now() - timestamp
+    });
   });
 
   // ==================== VOTE-KICK SYSTEM ====================

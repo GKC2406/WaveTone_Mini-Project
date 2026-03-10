@@ -1,11 +1,13 @@
 import { containsProfanity } from './profanityWordList';
 
 export class AudioPipeline {
-  constructor({ rawStream, onProfanityDetected, onPipelineReady, onError }) {
+  constructor({ rawStream, onProfanityDetected, onPipelineReady, onError, onServerModerationResult, socket }) {
     this.rawStream = rawStream;
     this.onProfanityDetected = onProfanityDetected;
     this.onPipelineReady = onPipelineReady;
     this.onError = onError;
+    this.onServerModerationResult = onServerModerationResult; // callback for server moderation results
+    this.socket = socket; // socket for server-side moderation
     this.audioContext = null;
     this.sourceNode = null;
     this.workletNode = null;
@@ -15,6 +17,9 @@ export class AudioPipeline {
     this.isActive = true;
     this.transcripts = []; // collected final transcripts for AI summary
     this.lastInterimTranscript = '';
+    this.wordTimings = []; // track word timings for word-level precision
+    this.recognitionStartTime = 0; // timestamp when recognition started
+    this.mutedSegments = []; // track muted segments for better buffering
   }
 
   async init() {
@@ -71,15 +76,27 @@ export class AudioPipeline {
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
         const cleanedTranscript = transcript?.replace(/\s+/g, ' ').trim() || '';
+        const isFinal = event.results[i].isFinal;
+        
+        // Word-level timing: extract individual words with their positions
+        this._extractWordTimings(cleanedTranscript, isFinal);
+        
         // Check profanity on both interim and final results for faster detection
         if (cleanedTranscript.length > 0 && containsProfanity(cleanedTranscript)) {
-          this._triggerMute();
+          // Trigger client-side mute with word-level precision
+          this._triggerMutePrecise(cleanedTranscript);
           this.onProfanityDetected?.(cleanedTranscript);
-          console.log('AudioPipeline: Profanity detected:', cleanedTranscript);
+          console.log('AudioPipeline: Profanity detected (client):', cleanedTranscript);
+          
+          // Send to server for hybrid moderation verification
+          if (this.socket) {
+            this._sendToServerModeration(cleanedTranscript);
+          }
           break;
         }
+        
         // Collect final (non-interim) transcripts for AI summary
-        if (event.results[i].isFinal && cleanedTranscript.length > 2) {
+        if (isFinal && cleanedTranscript.length > 2) {
           this.transcripts.push(cleanedTranscript);
           this.lastInterimTranscript = '';
         } else if (cleanedTranscript.length > 2) {
@@ -112,6 +129,81 @@ export class AudioPipeline {
     if (this.workletNode) {
       this.workletNode.port.postMessage({ type: 'mute', durationMs: 500 });
     }
+  }
+
+  // Word-level precise mute: calculate exact mute duration based on detected word
+  _triggerMutePrecise(transcript) {
+    // Estimate mute duration based on word length and typical speech rate
+    // Average speech rate: 150 words per minute = 2.5 words per second = 400ms per word
+    const wordCount = transcript.trim().split(/\s+/).length;
+    const estimatedDurationMs = Math.max(300, Math.min(800, wordCount * 250));
+    
+    if (this.workletNode) {
+      // Use enhanced mute message with word-level precision
+      this.workletNode.port.postMessage({ 
+        type: 'mute', 
+        durationMs: estimatedDurationMs,
+        wordCount: wordCount,
+        precisionMode: true // indicates word-level timing
+      });
+    }
+  }
+
+  // Extract word timings for word-level precision
+  _extractWordTimings(transcript, isFinal) {
+    const currentTime = Date.now();
+    if (!this.recognitionStartTime) {
+      this.recognitionStartTime = currentTime;
+    }
+    
+    const words = transcript.trim().split(/\s+/);
+    const timeBetweenWords = 150; // estimated ms between words
+    
+    words.forEach((word, index) => {
+      if (word.length > 0) {
+        const startTime = this.recognitionStartTime + (index * timeBetweenWords);
+        const endTime = startTime + (word.length * 30); // rough estimate: 30ms per character
+        
+        this.wordTimings.push({
+          word: word.toLowerCase(),
+          startTime,
+          endTime,
+          wordIndex: index,
+          isFinal
+        });
+      }
+    });
+  }
+
+  // Send transcript to server for hybrid moderation
+  _sendToServerModeration(transcript) {
+    if (!this.socket) return;
+    
+    // Emit to server for moderation verification
+    this.socket.emit('check-profanity-server', {
+      transcript,
+      wordTimings: this.wordTimings,
+      clientDetected: true,
+      timestamp: Date.now()
+    }, (response) => {
+      // Handle server response
+      if (response && response.isProfane) {
+        console.log('AudioPipeline: Server confirmed profanity:', response.badWords);
+        this.onServerModerationResult?.({
+          confirmed: true,
+          badWords: response.badWords,
+          confidence: response.confidence
+        });
+      } else if (response && !response.isProfane) {
+        console.log('AudioPipeline: Server disputed client detection - false positive');
+        // Server says it's not profane - could trigger recovery
+        this.onServerModerationResult?.({
+          confirmed: false,
+          reason: 'Server validation failed',
+          confidence: response.confidence
+        });
+      }
+    });
   }
 
   _restartRecognition() {

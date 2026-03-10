@@ -1,5 +1,6 @@
 // AudioWorklet processor — runs in a separate audio thread
 // Implements a ring buffer with a controllable gate for profanity muting
+// Enhanced with word-level timing and better buffering logic
 
 class ProfanityGateProcessor extends AudioWorkletProcessor {
   constructor() {
@@ -13,12 +14,31 @@ class ProfanityGateProcessor extends AudioWorkletProcessor {
     this.gateOpen = true;
     this.muteUntilSample = 0;
     this.totalSamples = 0;
+    this.mutedSegments = []; // track muted segments for better buffering logic
 
     // Listen for mute commands from main thread
     this.port.onmessage = (event) => {
       if (event.data.type === 'mute') {
         const muteDuration = event.data.durationMs || 500;
         const muteSamples = Math.floor(sampleRate * muteDuration / 1000);
+        const precisionMode = event.data.precisionMode || false;
+        const wordCount = event.data.wordCount || 1;
+        
+        // Better buffering: Track muted segments for potential recovery or replay
+        this.mutedSegments.push({
+          startSample: this.totalSamples,
+          endSample: this.totalSamples + muteSamples,
+          duration: muteDuration,
+          wordCount: wordCount,
+          precisionMode: precisionMode,
+          timestamp: Date.now()
+        });
+        
+        // Keep only last 10 muted segments to avoid memory bloat
+        if (this.mutedSegments.length > 10) {
+          this.mutedSegments.shift();
+        }
+        
         this.gateOpen = false;
         this.muteUntilSample = this.totalSamples + muteSamples;
       }

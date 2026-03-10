@@ -34,3 +34,25 @@ export function filterProfanity(text) {
   }
   return filtered;
 }
+
+// Extract profanity words found in text for hybrid moderation
+export function extractProfanityWords(text) {
+  if (!text) return [];
+  const words = text.toLowerCase().split(/\s+/);
+  const foundWords = [];
+  
+  words.forEach(word => {
+    BLOCKED_REGEXES.forEach((regex, index) => {
+      if (regex.test(word) && !foundWords.includes(BLOCKED_WORDS[index])) {
+        foundWords.push(BLOCKED_WORDS[index]);
+      }
+    });
+  });
+  
+  return foundWords;
+}
+
+// Get the profanity words list for server moderation
+export function getProfanityWords() {
+  return BLOCKED_WORDS;
+}

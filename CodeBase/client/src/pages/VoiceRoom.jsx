@@ -153,12 +153,21 @@ function VoiceRoom() {
             onProfanityDetected: () => {
               socketRef.current?.emit('profanity-warning', { roomId });
             },
+            onServerModerationResult: (result) => {
+              // Handle server moderation response
+              if (result.confirmed) {
+                console.log('Profanity confirmed by server:', result.badWords);
+              } else {
+                console.log('Server rejected profanity detection - false positive recovered');
+              }
+            },
             onPipelineReady: (processed) => {
               processedStreamRef.current = processed;
             },
             onError: () => {
               processedStreamRef.current = stream;
             },
+            socket: socketRef.current // pass socket for hybrid moderation
           });
           audioPipelineRef.current = pipeline;
           await pipeline.init();
