@@ -19,11 +19,13 @@ function App() {
   // Initialize theme immediately with localStorage value
   const initializeTheme = () => {
     const savedTheme = localStorage.getItem('wavetone-theme') || 'dark';
-    // Apply theme synchronously before render
-    document.documentElement.setAttribute('data-theme', savedTheme);
-    const themeVars = savedTheme === 'dark' ? darkTheme : lightTheme;
-    for (const key in themeVars) {
-      document.documentElement.style.setProperty(key, themeVars[key]);
+    // Only apply theme if not already set
+    if (document.documentElement.getAttribute('data-theme') !== savedTheme) {
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      const themeVars = savedTheme === 'dark' ? darkTheme : lightTheme;
+      for (const key in themeVars) {
+        document.documentElement.style.setProperty(key, themeVars[key]);
+      }
     }
     return savedTheme;
   };
@@ -32,11 +34,14 @@ function App() {
 
   useEffect(() => {
     if (theme === 'animating') return;
-    const themeVars = theme === 'dark' ? darkTheme : lightTheme;
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('wavetone-theme', theme);
-    for (const key in themeVars) {
-      document.documentElement.style.setProperty(key, themeVars[key]);
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    if (theme !== currentTheme) {
+      const themeVars = theme === 'dark' ? darkTheme : lightTheme;
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('wavetone-theme', theme);
+      for (const key in themeVars) {
+        document.documentElement.style.setProperty(key, themeVars[key]);
+      }
     }
   }, [theme]);
 
@@ -80,8 +85,10 @@ function App() {
             <button
               className={`theme-toggle${theme === 'animating' ? ' rotating' : ''}`}
               onClick={() => {
-                setTheme('animating');
-                setTimeout(() => setTheme(theme === 'dark' ? 'light' : 'dark'), 400);
+                if (theme !== 'animating') {
+                  setTheme('animating');
+                  setTimeout(() => setTheme(theme === 'dark' ? 'light' : 'dark'), 400);
+                }
               }}
               title="Toggle light/dark mode"
               aria-label="Toggle theme"
