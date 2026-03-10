@@ -24,7 +24,9 @@ function normalizeTranscripts(transcripts) {
 
 function buildFallbackSummary({ transcripts, topic, category, duration, participantCount }) {
   const cleaned = normalizeTranscripts(transcripts);
-  if (cleaned.length === 0) return null;
+  if (cleaned.length === 0) {
+    return 'No clear transcript was captured for this session, so a detailed summary could not be generated.';
+  }
 
   const uniqueSnippets = [];
   cleaned.forEach((entry) => {
@@ -59,6 +61,19 @@ function buildFallbackSummary({ transcripts, topic, category, duration, particip
   if (!highlight) return opener;
 
   return `${opener} Transcript highlights included: ${highlight}`;
+}
+
+function isLowConfidenceSummary(summaryText = '') {
+  const text = String(summaryText).toLowerCase();
+  if (!text) return true;
+
+  return (
+    text.includes('too fragmented to summarize')
+    || text.includes('appears to be fragmented')
+    || text.includes('does not provide enough information')
+    || text.includes('not enough information to generate a summary')
+    || text.includes('insufficient information to summarize')
+  );
 }
 
 async function generateWithGroq(prompt) {
@@ -137,6 +152,14 @@ Generate a concise 2-4 sentence summary of what was discussed. Focus on key topi
     if (groq) {
       try {
         const { summary, modelName } = await generateWithGroq(prompt);
+        if (isLowConfidenceSummary(summary)) {
+          return res.json({
+            summary: fallbackSummary,
+            provider: 'local-fallback',
+            reason: 'AI summary was low-confidence. Using local transcript summary.',
+            model: modelName,
+          });
+        }
         return res.json({ summary, provider: 'groq', model: modelName });
       } catch (groqErr) {
         console.warn('Groq failed:', groqErr.message);
