@@ -283,6 +283,7 @@
   background: linear-gradient(135deg, var(--speaking) 0%, rgba(56, 189, 248, 0.8) 100%);
   box-shadow: 0 0 16px rgba(56, 189, 248, 0.4), inset 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+/* Toggle knob with rotation and scale effect */
 .toggle-switch::after {
   content: '';
   position: absolute;
@@ -292,12 +293,16 @@
   background: #fff;
   top: 4px;
   left: 4px;
-  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s, background 0.3s;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  will-change: transform;
 }
 .toggle-switch.active::after {
-  transform: translateX(22px);
+  transform: translateX(22px) rotate(25deg) scale(1.08);
   box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
+}
+.toggle-switch:active::after {
+  transform: translateX(0) scale(0.96);
 }
 
 /* Badge */
