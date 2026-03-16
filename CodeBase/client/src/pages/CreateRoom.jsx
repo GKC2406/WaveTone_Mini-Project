@@ -52,7 +52,7 @@ function CreateRoom() {
 
           <div className="form-group">
             <label className="form-label">Category</label>
-            <select className="form-select" value={category} onChange={(e) => { setCategory(e.target.value); setError(null); }}>
+            <select className="form-select" aria-label="Category" value={category} onChange={(e) => { setCategory(e.target.value); setError(null); }}>
               {categories.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
@@ -81,6 +81,7 @@ function CreateRoom() {
             <label className="form-label">Max Participants</label>
             <select
               className="form-select"
+              aria-label="Max Participants"
               value={maxUsers}
               onChange={(e) => setMaxUsers(Number(e.target.value))}
             >
@@ -98,6 +99,7 @@ function CreateRoom() {
             <button
               type="button"
               className={`toggle-switch${isPrivate ? ' active' : ''}`}
+              aria-label={isPrivate ? 'Set room to public' : 'Set room to private'}
               onClick={() => setIsPrivate(!isPrivate)}
             />
           </div>

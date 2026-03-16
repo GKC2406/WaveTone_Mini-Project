@@ -1,3 +1,10 @@
+/* Feature card heading (h2) style for visual balance */
+.feature-card h2 {
+  color: var(--text-primary);
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 0.45rem;
+}
 /* ===== HOME PAGE ===== */
 .home-page {
   display: flex;
@@ -292,10 +299,15 @@
   margin-bottom: 0.45rem;
 }
 
+/* Default paragraph style */
 .feature-card p {
   color: var(--text-tertiary);
   font-size: 0.88rem;
   line-height: 1.5;
+}
+/* Light theme: improve contrast for feature card paragraphs */
+[data-theme="light"] .feature-card p {
+  color: #26334D;
 }
 
 /* ===== RESPONSIVE ===== */
