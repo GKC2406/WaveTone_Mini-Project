@@ -1,3 +1,28 @@
+[data-theme="light"] .mic-btn-voiceroom:hover {
+  background: linear-gradient(135deg, #e3f0ff 0%, #b6e0fe 100%) !important;
+  color: #0A2E50 !important;
+}
+/* Improved VoiceRoom mic/exit button backgrounds for light theme */
+[data-theme="light"] .mic-btn-voiceroom {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%) !important;
+  color: #0A2E50 !important;
+  border: 1.5px solid #e0e0e0;
+  box-shadow: 0 2px 8px rgba(10,46,80,0.08);
+}
+[data-theme="light"] .mic-btn-voiceroom.active {
+  background: linear-gradient(135deg, #b6e0fe 0%, #6ec6ff 100%) !important;
+  color: #fff !important;
+}
+[data-theme="light"] .exit-btn-voiceroom {
+  background: linear-gradient(135deg, #ffe0e0 0%, #ffb3b3 100%) !important;
+  color: #b71c1c !important;
+  border: 1.5px solid #ffcdd2;
+  box-shadow: 0 2px 8px rgba(183,28,28,0.08);
+}
+[data-theme="light"] .exit-btn-voiceroom:hover {
+  background: #e53935 !important;
+  color: #fff !important;
+}
 /* Home button styles for better INP */
 .home-btn {
   display: inline-flex;

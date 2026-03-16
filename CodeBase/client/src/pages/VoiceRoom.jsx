@@ -531,7 +531,7 @@ function VoiceRoom() {
       {/* Controls */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '0.5rem' }}>
         <button
-          className={`control-btn${!muted ? ' active' : ''}`}
+          className={`control-btn${!muted ? ' active' : ''} mic-btn-voiceroom`}
           onClick={handleMuteToggle}
           title={muted ? 'Unmute' : 'Mute'}
         >
@@ -542,7 +542,7 @@ function VoiceRoom() {
           )}
         </button>
         <button
-          className="control-btn danger"
+          className="control-btn danger exit-btn-voiceroom"
           onClick={handleLeave}
           title="Leave Room"
         >
