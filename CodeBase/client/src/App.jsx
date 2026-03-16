@@ -120,6 +120,7 @@ function App() {
         <div className="page-box">
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/home" element={<Home />} />
             <Route path="/browse" element={<BrowseRooms />} />
             <Route path="/create" element={<CreateRoom />} />
             <Route path="/join/:roomId" element={<JoinRoom />} />

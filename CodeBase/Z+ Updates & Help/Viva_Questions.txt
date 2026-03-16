@@ -13,7 +13,7 @@ What is WaveTone?
 > When everyone leaves, the room is destroyed.
 
 Tech Stack:
-> Frontend: React 18 + Vite (build tool) + React Router v6
+> Frontend: React 18 + Vite (build tool) + React Router v6w
 > Backend: Node.js + Express.js
 > Database: MongoDB Atlas (cloud) via Mongoose ODM
 > Real-Time: WebRTC (peer-to-peer voice) + Socket.io (signaling/events)
