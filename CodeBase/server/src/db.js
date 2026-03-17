@@ -1,3 +1,4 @@
+//MongoDB connection
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 

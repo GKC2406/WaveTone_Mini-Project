@@ -14,20 +14,23 @@ dotenv.config();
 connectDB();
 
 const app = express();
+
 const server = http.createServer(app);
+const allowedOrigins = [
+  'https://wave-tone-mini-project.vercel.app',
+  'https://wavetone.vercel.app',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173'
+];
 const io = new SocketIOServer(server, {
   cors: {
-    origin: '*',
+    origin: allowedOrigins,
     methods: ['GET', 'POST']
   }
 });
 
 app.use(cors({
-  origin: [
-    'https://wave-tone-mini-project.vercel.app',
-    'http://localhost:5173',
-    'http://127.0.0.1:5173'
-  ],
+  origin: allowedOrigins,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
