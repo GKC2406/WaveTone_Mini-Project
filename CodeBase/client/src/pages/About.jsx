@@ -2,7 +2,13 @@ import React, { useEffect } from 'react';
 import './shared.css';
 
 function About() {
-  useEffect(() => { document.title = 'About - WaveTone'; }, []);
+  useEffect(() => {
+    document.title = 'About - WaveTone';
+    document.body.setAttribute('data-route', 'about');
+    return () => {
+      document.body.removeAttribute('data-route');
+    };
+  }, []);
   return (
     <section className="page-section">
       <h2 className="page-title">About WaveTone</h2>

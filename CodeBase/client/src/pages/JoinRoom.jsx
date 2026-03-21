@@ -19,7 +19,13 @@ function JoinRoom() {
       .catch(err => { setError(err.message); setLoading(false); });
   }, [roomId]);
 
-  useEffect(() => { document.title = room ? `Join ${room.topic} - WaveTone` : 'Join Room - WaveTone'; }, [room]);
+    useEffect(() => {
+      document.title = room ? `Join ${room.topic} - WaveTone` : 'Join Room - WaveTone';
+      document.body.setAttribute('data-route', 'join-room');
+      return () => {
+        document.body.removeAttribute('data-route');
+      };
+    }, [room]);
 
   const activeCount = room ? room.participants.filter(p => !p.leftAt).length : 0;
   const isFull = room && activeCount >= room.maxUsers;

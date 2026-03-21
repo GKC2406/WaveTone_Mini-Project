@@ -14,7 +14,13 @@ function CreateRoom() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  useEffect(() => { document.title = 'Create Room - WaveTone'; }, []);
+  useEffect(() => {
+    document.title = 'Create Room - WaveTone';
+    document.body.setAttribute('data-route', 'create-room');
+    return () => {
+      document.body.removeAttribute('data-route');
+    };
+  }, []);
 
   const handleCreate = async (e) => {
     e.preventDefault();

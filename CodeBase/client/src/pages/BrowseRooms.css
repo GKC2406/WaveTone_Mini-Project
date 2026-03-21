@@ -1,3 +1,44 @@
+@media (max-width: 900px) {
+  .room-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.7rem;
+  }
+  .browse-search-box {
+    max-width: 100%;
+    padding: 0.5rem 0.7rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .browse-search-row {
+    margin-bottom: 1rem;
+  }
+  .browse-tabs {
+    gap: 0.2rem;
+    font-size: 0.8rem;
+    padding-bottom: 0.1rem;
+  }
+  .room-card {
+    padding: 0.7rem 0.6rem;
+    border-radius: 8px;
+  }
+  .room-topic {
+    font-size: 0.95rem;
+  }
+  .room-users, .room-join-link {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .room-grid {
+    grid-template-columns: 1fr;
+  }
+  .browse-tabs {
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+}
 /* ===== BROWSE ROOMS ===== */
 
 /* Search */

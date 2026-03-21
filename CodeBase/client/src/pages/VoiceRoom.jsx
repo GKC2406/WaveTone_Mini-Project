@@ -20,7 +20,13 @@ function VoiceRoom() {
   const roomData = location.state?.room || {};
   const maxUsers = roomData.maxUsers || 10;
 
-  useEffect(() => { document.title = roomData.topic ? `${roomData.topic} - WaveTone` : 'Voice Room - WaveTone'; }, [roomData.topic]);
+    useEffect(() => {
+      document.title = `Room | ${roomId}`;
+      document.body.setAttribute('data-route', 'voice-room');
+      return () => {
+        document.body.removeAttribute('data-route');
+      };
+    }, [roomId]);
 
   const [participants, setParticipants] = useState([]);
   const [muted, setMuted] = useState(true);

@@ -313,6 +313,16 @@
 /* ===== RESPONSIVE ===== */
 @media (max-width: 600px) {
   .home-hero { padding: 2.5rem 1rem 3.5rem 1rem; min-height: 50vh; }
+  .home-hero-content {
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+  }
+  .home-logo {
+    display: block;
+    align-self: center;
+    margin: 0 auto 1.8rem auto;
+  }
   .home-title { font-size: 2.2rem; }
   .home-subtext { font-size: 0.95rem; }
   .home-logo { width: 70px; }

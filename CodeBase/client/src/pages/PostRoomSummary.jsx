@@ -14,7 +14,13 @@ function PostRoomSummary() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiMeta, setAiMeta] = useState({ provider: null, reason: null });
 
-  useEffect(() => { document.title = 'Session Summary - WaveTone'; }, []);
+  useEffect(() => {
+    document.title = 'Session Summary - WaveTone';
+    document.body.setAttribute('data-route', 'post-room-summary');
+    return () => {
+      document.body.removeAttribute('data-route');
+    };
+  }, []);
 
   useEffect(() => {
     if (stateData.room) {

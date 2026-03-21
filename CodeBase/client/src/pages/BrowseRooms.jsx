@@ -32,7 +32,13 @@ function BrowseRooms() {
     }
   };
 
-  useEffect(() => { document.title = 'Browse Rooms - WaveTone'; }, []);
+  useEffect(() => {
+    document.title = 'Browse Rooms - WaveTone';
+    document.body.setAttribute('data-route', 'browse-rooms');
+    return () => {
+      document.body.removeAttribute('data-route');
+    };
+  }, []);
 
   const fetchRooms = () => {
     setLoading(prev => rooms.length === 0 ? true : prev); // only show skeleton on first load

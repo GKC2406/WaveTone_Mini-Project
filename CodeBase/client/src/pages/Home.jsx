@@ -5,6 +5,13 @@ import MainLogo from '../assets/main-logo.png';
 
 function Home() {
   useEffect(() => { document.title = 'WaveTone'; }, []);
+    useEffect(() => {
+      document.title = 'WaveTone - Home';
+      document.body.setAttribute('data-route', 'home');
+      return () => {
+        document.body.removeAttribute('data-route');
+      };
+    }, []);
   return (
     <div className="home-page">
       {/* Hero Section */}
