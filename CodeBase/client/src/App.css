@@ -45,9 +45,8 @@
   font-weight: 500;
   background: transparent;
   border-color: transparent;
-  border-radius: 0;
-  border: 3.5px solid transparent;
-  border-bottom: 3.5px solid transparent;
+  border-radius: 8px;
+  border: 1.5px solid transparent;
   padding-bottom: 0.35rem;
 }
 
@@ -62,8 +61,7 @@
 [data-theme="light"] .nav-link.active {
   color: #FFFFFF;
   background: #0F172A;
-  border: 3.5px solid #0F172A;
-  border-bottom: 3.5px solid #0F172A;
+  border: 1.5px solid #0F172A;
   box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);
   font-weight: 600;
 }
