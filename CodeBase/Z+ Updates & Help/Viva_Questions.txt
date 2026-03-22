@@ -652,3 +652,13 @@ A: The speaker balance tracker collects the same metadata that AI Option B
    dominance patterns are all derivable from this data. Adding interruption
    detection (spoke within 500ms of someone stopping) and volume spike tracking
    would complete the AI behavior model — all without analyzing speech content.
+
+
+
+Q. How does transcript fallback work when AI confidence is low?
+
+The AudioPipeline collects transcripts using the browser’s SpeechRecognition API.
+Finalized transcripts are stored in this.transcripts. Interim (unfinished) transcripts are kept in this.lastInterimTranscript.
+The getTranscripts() method returns all finalized transcripts, and if the last interim transcript is non-trivial (length > 2), it is also included as a fallback.
+This ensures that if the AI (or server) does not provide a confident/proper transcript, the most recent local transcript (even if not finalized) is still available for summary or moderation.
+Summary: Fallback means including the last interim (local) transcript if it’s not already in the finalized list, so nothing is lost if AI/server confidence is low or a final result is missing.

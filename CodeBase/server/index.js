@@ -92,9 +92,10 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // Check if room exists in database
+    // Check if room exists in database and enforce maxUsers
+    let roomExists;
     try {
-      const roomExists = await Room.findById(roomId);
+      roomExists = await Room.findById(roomId);
       if (!roomExists) {
         socket.emit('room-error', { code: 'NOT_FOUND', error: 'Room has been destroyed or does not exist.' });
         return;
@@ -106,6 +107,13 @@ io.on('connection', (socket) => {
 
     if (!roomParticipants.has(roomId)) roomParticipants.set(roomId, []);
     const participants = roomParticipants.get(roomId);
+
+    // Enforce maxUsers limit
+    const maxUsers = roomExists.maxUsers || 10;
+    if (participants.length >= maxUsers) {
+      socket.emit('join-denied', { reason: 'Room is full.' });
+      return;
+    }
 
     // Assign 'Host' only to the first participant, others get their alias or 'Anonymous'
     let cleanAlias;

@@ -1,0 +1,304 @@
+
+You should see a proper professional message when you get kicked by the Host or get vote kicked
+
+Your profanity detection logic is present and should, in theory, mute words like "retard" (which is in your BLOCKED_WORDS list). However, possible reasons you are still able to say bad words include:
+
+Speech Recognition Limitations: The browser's speech recognition may not always transcribe words accurately, especially for slang, accents, or fast speech. If "retard" is not transcribed as expected, it won't be detected.
+
+Profanity Regex: Your regex is robust (handles leet and spacing), but if the speech recognition outputs a word with a typo or unexpected character, it may not match.
+
+Mute Timing: The mute is triggered after the word is recognized, so a small portion of the word may still be heard before the mute kicks in due to processing delay.
+
+Audio Worklet: The worklet only mutes after receiving a message from the main thread. If the detection or message is delayed, some audio may pass through.
+
+Testing Method: If you are testing by speaking and not typing, browser speech recognition may not always catch the word as intended.
+
+Suggestions:
+
+Check the browser console for logs like "Profanity detected" to see if detection is happening.
+Try typing the word in a test transcript to see if containsProfanity works as expected.
+Add more logging to see what transcript is being checked.
+Consider muting audio slightly before the detected word if possible, or increasing the mute duration.
+
+
+
+*No Host Transfer:* If the Host leaves, there is currently no auto-assignment of a new Host (future enhancement).
+
+=> Suggestion from Suneet => Make A Sub-Host Role that can be assigned by the Host, There will be a button for it, and if the Host leaves, the Sub-Host becomes the new Host. This would ensure continuity of the session without interruption. The Host Can Assign Multiple Sub-Hosts for added flexibility and backup with ranking if needed. There should be a clear UI indication of who the Host and Sub-Hosts are, and the ability for the Host to revoke Sub-Host status if necessary. There should be allocate a timeout for the Host to return before a Sub-Host is automatically promoted to Host, to prevent accidental promotions.
+
+*Profanity Detection:* The current profanity detection is based on browser speech recognition, which may not be perfect. It can miss words or have delays in muting.
+=> Suggestion from Suneet => Consider using a more robust profanity detection library or API that can handle a wider range of inputs and provide more accurate results. This would improve the overall user experience by reducing the likelihood of profanity being heard during a session.
+
+
+
+## Future Enhancements
+
+- [ ] AI behavior detection (interruptions, volume spikes, monologues)
+- [ ] Adaptive moderation thresholds per room category
+- [ ] Room timer with auto-close
+- [ ] Conversation phase control (Intro / Discussion / Summary)
+- [ ] TensorFlow.js toxicity model (upgrade from regex)
+
+
+
+
+#Important Working
+1> Audio Buffer Pipeline (400ms Ring Buffer + Profanity Gate)
+   Status: IMPLEMENTED — Core innovation of WaveTone
+
+   What it does:
+   > Mic audio passes through an AudioWorklet with a 400ms ring buffer
+   > Web Speech API runs in parallel, converting speech to text in real-time
+   > Text is checked against profanity word list
+   > If profane → worklet gate closes → segment is muted/silenced for 500ms
+   > If clean → audio passes through to WebRTC peers
+
+   Architecture:
+   Mic → AudioContext → AudioWorkletNode (400ms buffer, gate control)
+        → MediaStreamAudioDestinationNode → processedStream → WebRTC
+
+   Mic → SpeechRecognition (parallel, interimResults: true)
+        → onresult → check profanity → if detected → postMessage to worklet → gate closes
+
+   Files created:
+   > client/public/profanity-worklet.js — AudioWorklet processor (400ms ring buffer + gate)
+   > client/src/audio/AudioPipeline.js — Orchestrator (AudioContext + SpeechRecognition + worklet wiring)
+   > client/src/audio/profanityWordList.js — Client-side word list + leet-speak regex
+
+   Files modified:
+   > client/src/pages/VoiceRoom.jsx — processedStream replaces raw stream in WebRTC addTrack
+   > server/index.js — profanity-warning event handler + socketWarnings Map
+
+   Latency budget:
+   > Buffer delay: 400ms
+   > SpeechRecognition interim results: ~200-300ms
+   > Total target: <600ms (voice acceptable up to 700ms)
+
+   Fallback:
+   > If AudioWorklet unavailable (old browser) → raw stream passes through
+   > If SpeechRecognition unavailable (Firefox) → no detection, audio unfiltered
+   > Warning system still works as safety net in both cases
+
+
+ Speaking Time Tracker + Balance Insight
+    Academic framing:
+   > "Audio metadata analysis for participation balance insight"
+
+
+
+   7> AI Speech-to-Text Profanity Classification (Option A from docs)
+   Status: FUTURE — upgrade over keyword matching
+
+   What it does:
+   > Replace regex-based profanity check with ML toxicity classifier
+   > TensorFlow.js @tensorflow-models/toxicity runs in-browser
+   > OR send text chunks to Claude Haiku API (~$0.001/call, ~200ms response)
+   > Catches contextual toxicity that keyword lists miss
+
+
+   11> Conversation Phase Control With Room Timers
+    Status: FUTURE — unique system design feature
+
+    What it does:
+    > Rooms divided into phases: Intro (2 min) → Open Discussion → Summary (1 min)
+    > Different rules per phase (e.g., no kicks during Intro)
+    > Server manages phase transitions with timers
+    > No AI required — pure system design innovation
+
+
+
+
+    -------------------------------------------------------------------------------
+🔹 Signaling Layer
+-------------------------------------------------------------------------------
+
+WebRTC does NOT define how peers find each other.
+
+So we implement signaling via Socket.io.
+
+Flow:
+
+User joins room
+
+Server notifies existing peers
+
+Peer A sends SDP offer
+
+Peer B responds with SDP answer
+
+Both exchange ICE candidates
+
+Direct peer connection established
+
+
+
+
+-------------------------------------------------------------------------------
+8️⃣ Behavior Under 1000 Users
+-------------------------------------------------------------------------------
+
+If:
+
+10 users per room
+
+100 rooms
+
+Server load:
+
+Socket connections = 1000
+Mongo writes = minimal
+Media = peer-to-peer (no load)
+
+Critical load point:
+Signaling bursts during joins.
+
+Mitigation:
+
+Use Redis adapter if scaling across instances
+
+Horizontal scale Node
+
+
+
+
+SECTION 2: COMPLETE FILE STRUCTURE & WHAT EACH FILE DOES
+===============================================================================
+
+CodeBase/
+├── README.md                          — Project description
+├── Z+ Updates & Help/                 — Documentation folder
+│   ├── Project_Info.txt               — Architecture, data flow, WebRTC deep dive
+│   ├── Future Upgrades AI.txt         — AI feature options (speech-to-text, behavior detection)
+│   ├── Future_Features[Non-AI].txt    — Non-AI enhancements (phase control, vote-kick, summaries)
+│   ├── AI_Recommendations.txt         — Prioritized feature implementation guide
+│   └── Viva_Questions.txt             — This file
+│
+├── client/                            — FRONTEND (React)
+│   ├── index.html                     — Entry HTML. Loads /src/main.jsx. Has favicon link.
+│   ├── package.json                   — Dependencies: react, react-dom, react-router-dom,
+│   │                                    socket.io-client, @mui/material, @mui/icons-material, vite
+│   ├── vite.config.js                 — Vite build config. Proxies /api to localhost:5000 in dev.
+│   │
+│   ├── public/
+│   │   └── profanity-worklet.js       — AudioWorklet processor. 400ms ring buffer with mute gate.
+│   │                                    Runs in separate audio thread. Receives mute commands via
+│   │                                    MessagePort. Must be in public/ (worklets load via URL).
+│   │
+│   └── src/
+│       ├── main.jsx                   — React entry point. Creates root, wraps App in BrowserRouter.
+│       │                                Sets React Router v7 future flags.
+│       ├── App.jsx                    — Root component. Contains:
+│       │                                - Navbar with logo, links (Create, Browse, About), home button
+│       │                                - Theme toggle (dark/light) with localStorage persistence
+│       │                                - Route definitions for all 7 pages
+│       ├── App.css                    — CSS variables (:root dark defaults + [data-theme="light"]),
+│       │                                navbar styles, page container, button styles (.home-btn-solid,
+│       │                                .home-btn-outline), responsive breakpoints
+│       ├── theme.js                   — JS theme objects (darkTheme, lightTheme) with CSS variable
+│       │                                values. Applied to document.documentElement in App.jsx.
+│       ├── theme.css                  — Accent/outline button styles, warning toast, glass utility,
+│       │                                glow utility, fadeIn/slideUp animations
+│       ├── index.css                  — Global resets, font import (Inter), scrollbar styling,
+│       │                                text selection colors
+│       │
+│       ├── assets/
+│       │   └── main-logo.png          — WaveTone logo used in navbar and home page
+│       │
+│       ├── audio/
+│       │   ├── profanityWordList.js   — Client-side blocked words + leet-speak regex builder.
+│       │   │                            Exports containsProfanity(text). Used by AudioPipeline.
+│       │   └── AudioPipeline.js       — Orchestrator class. Creates AudioContext, loads worklet,
+│       │                                wires mic → worklet → destination. Runs SpeechRecognition
+│       │                                in parallel. On profanity detected → signals worklet gate
+│       │                                to mute 500ms. Graceful fallback if APIs unavailable.
+│       │
+│       ├── services/
+│       │   ├── api.js                 — Centralized API fetch helpers:
+│       │   │                            getRooms(), getRoomById(), createRoom(), joinRoom(),
+│       │   │                            leaveRoom(), getSessionSummary()
+│       │   │                            Auto-detects dev (Vite proxy) vs production (VITE_API_URL)
+│       │   └── socket.js             — Socket.io singleton: getSocket(), connectSocket(),
+│       │                                disconnectSocket(). Connects to localhost:5000 or VITE_API_URL.
+│       │
+│       └── pages/
+│           ├── Home.jsx               — Landing page: hero with logo, title, tagline, wave animation
+│           │                            (24 animated voice bars), feature cards grid (4 cards)
+│           ├── Home.css               — Hero layout, wave bar keyframes, divider animation (wheat glow),
+│           │                            feature card styles, light/dark theme variants, responsive
+│           ├── BrowseRooms.jsx        — Room listing: fetches from API, search bar, category tabs,
+│           │                            room cards with live count, "Join by Code" input for private rooms
+│           ├── BrowseRooms.css        — Search box, tabs, room grid, room card hover effects
+│           ├── CreateRoom.jsx         — Room creation form: topic, category (including Custom with
+│           │                            20-char limit), max participants (2-10), private toggle.
+│           │                            POSTs to /api/rooms, navigates to VoiceRoom.
+│           ├── JoinRoom.jsx           — Pre-join page: fetches room from API, shows topic/category/
+│           │                            participant count, alias input, full-room guard
+│           ├── VoiceRoom.jsx          — THE CORE PAGE. Handles:
+│           │                            - Mic capture (getUserMedia)
+│           │                            - Audio buffer pipeline (AudioPipeline → processed stream)
+│           │                            - Socket.io connection + join-room
+│           │                            - WebRTC peer connections (RTCPeerConnection per peer)
+│           │                            - SDP offer/answer exchange
+│           │                            - ICE candidate relay
+│           │                            - Speaking detection (AudioContext + AnalyserNode)
+│           │                            - Mute/unmute (track.enabled toggle)
+│           │                            - Copy room link button
+│           │                            - Kick participant + Vote-kick UI
+│           │                            - Profanity warning toast + warning badge
+│           │                            - Leave room → navigate to summary
+│           ├── PostRoomSummary.jsx     — Session summary: shows duration, participant count, warnings.
+│           │                            Uses navigate state or falls back to API fetch.
+│           ├── About.jsx              — About page: what is WaveTone, room rules list,
+│           │                            4-step "How It Works" with icons
+│           └── shared.css             — Shared component styles: page sections, cards, form elements,
+│                                        toggles, badges, stat cards, info rows, participant avatars,
+│                                        control buttons, empty states, about-step-items,
+│                                        dark/light theme variants for all components
+
+├── server/                            — BACKEND (Node + Express)
+│   ├── .env                           — MongoDB connection string (MONGO_URI). NOT committed to git.
+│   ├── package.json                   — Dependencies: express, socket.io, mongoose, cors, dotenv.
+│   │                                    Dev: nodemon. Type: "module" (ES modules).
+│   ├── index.js                       — MAIN SERVER FILE. Does everything:
+│   │                                    - Express app + HTTP server + Socket.io server
+│   │                                    - Mounts API routes
+│   │                                    - Socket.io signaling: join-room, leave-room, offer, answer,
+│   │                                      ice-candidate, kick-user (with IP ban), join-denied
+│   │                                    - Profanity warning system (3 strikes → auto-kick + IP ban)
+│   │                                    - Vote-kick system (70% threshold, 30s timeout)
+│   │                                    - In-memory Maps: roomParticipants, socketAliases,
+│   │                                      roomBannedIPs, socketWarnings, activeVotes
+│   │                                    - Auto-deactivates rooms in MongoDB when last participant leaves
+│   │                                    - Profanity filter on aliases
+│   │
+│   └── src/
+│       ├── db.js                      — MongoDB connection via Mongoose. Graceful error (no crash).
+│       │
+│       ├── models/
+│       │   └── Room.js                — Mongoose schema: topic, category, maxUsers, duration,
+│       │                                isPrivate, profanityFilter, rejoinAllowed, isActive,
+│       │                                participants[{userId, alias, joinedAt, leftAt}], createdAt
+│       │
+│       ├── controllers/
+│       │   ├── roomController.js      — GET /api/rooms (list active, non-private, newest first,
+│       │   │                            auto-cleans stale rooms), POST /api/rooms (create with
+│       │   │                            profanity check on topic/category, whitelisted fields only)
+│       │   ├── roomDetailsController.js — GET /api/rooms/:id, POST /api/rooms/:id/join (capacity
+│       │   │                            check, participant tracking), POST /api/rooms/:id/leave
+│       │   │                            (marks leftAt, auto-deactivates empty rooms)
+│       │   └── summaryController.js   — GET /api/sessions/:id/summary (room stats)
+│       │
+│       ├── routes/
+│       │   ├── roomRoutes.js          — Mounts roomController: GET /, POST /
+│       │   ├── roomDetailsRoutes.js   — Mounts roomDetailsController: GET /:id, POST /:id/join,
+│       │   │                            POST /:id/leave
+│       │   └── summaryRoutes.js       — Mounts summaryController: GET /:id/summary
+│       │
+│       └── utils/
+│           └── profanityFilter.js     — Blocked words list (~20 words), leet-speak regex builder
+│                                        (a→[a@4], etc.), separator-aware matching (f-u-c-k).
+│                                        Exports: containsProfanity(text), filterProfanity(text)
+
+
+
+

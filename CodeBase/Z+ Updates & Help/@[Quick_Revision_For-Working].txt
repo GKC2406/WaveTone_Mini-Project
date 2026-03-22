@@ -1,0 +1,74 @@
+SECTION 3: HOW THE SYSTEM WORKS (END TO END)
+===============================================================================
+
+--- ROOM CREATION FLOW ---
+1. User fills form on CreateRoom page (topic, category, max participants, private)
+2. React sends POST /api/rooms to Express backend
+3. roomController validates: profanity check on topic/category, whitelist fields
+4. Mongoose saves Room document to MongoDB Atlas
+5. Server returns room object with _id
+6. React navigates to /room/:_id with room data in state
+
+--- ROOM BROWSING FLOW ---
+1. BrowseRooms page sends GET /api/rooms
+2. Controller first cleans stale rooms (all participants left → isActive: false)
+3. Queries MongoDB: { isActive: true, isPrivate: false }, sorted newest first
+4. Returns room array with participant data
+5. React renders cards showing topic, category, live participant count
+6. User clicks Join → navigates to /join/:id
+
+--- JOINING A ROOM FLOW ---
+1. JoinRoom page fetches GET /api/rooms/:id
+2. Shows room info (topic, category, count, full/not-full)
+3. User enters alias (or gets random one from list of 10 names)
+4. Clicks Join → navigates to /room/:id with alias + room in state
+
+--- VOICE ROOM (CORE) FLOW ---
+1. VoiceRoom mounts → requests microphone via getUserMedia()
+2. Connects to Socket.io server
+3. Emits join-room with roomId + alias
+4. Server checks: is IP banned? If yes → emit join-denied, stop.
+5. Server filters alias for profanity
+6. Server adds to in-memory roomParticipants Map
+7. Server sends room-users (existing participants) back to joiner
+8. Server broadcasts user-joined to everyone else
+
+--- WEBRTC CONNECTION (PER PEER) ---
+9. When user-joined fires on existing peer A:
+   a. A creates RTCPeerConnection with STUN servers
+   b. A adds local audio tracks to the connection
+   c. A creates SDP offer (describes audio capabilities)
+   d. A sends offer via Socket.io to new peer B
+10. Server relays offer to B
+11. B creates RTCPeerConnection, sets offer as remote description
+12. B creates SDP answer, sends back via Socket.io
+13. Both exchange ICE candidates (network path discovery via STUN)
+14. Once matching path found → direct peer-to-peer audio stream established
+15. Audio flows P2P — server NEVER sees or handles audio
+
+--- SPEAKING DETECTION ---
+16. For each audio stream (local + all remotes):
+    a. Create AudioContext + AnalyserNode
+    b. Every 100ms: getByteFrequencyData → calculate average amplitude
+    c. If average > threshold → mark as speaking
+    d. React updates UI: blue glow on avatar, cyan-colored name
+
+--- LEAVING / DISCONNECTING ---
+17. User clicks Leave → emits leave-room → server removes from Map
+18. If last participant → server sets room isActive: false in MongoDB
+19. Server broadcasts user-left → other peers close that RTCPeerConnection
+20. Navigate to PostRoomSummary with duration + participant count
+
+--- KICK FLOW ---
+21. Host clicks Kick on a participant
+22. Emits kick-user with target socketId
+23. Server gets target's IP, adds to roomBannedIPs Map
+24. Emits kicked to target → target navigates away
+25. Server runs _leaveRoom for target
+
+--- PRIVATE ROOM FLOW ---
+26. Creator sets Private toggle → room saved with isPrivate: true
+27. Room does NOT appear in Browse (filtered out by query)
+28. Creator clicks Copy Link in VoiceRoom → copies /join/:id URL
+29. Shares with friend → friend pastes in "Join by Code" input on Browse
+30. Friend navigates to /join/:id → joins normally
