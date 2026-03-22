@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import './shared.css';
+import { NavLink } from 'react-router-dom';
 
 function About() {
   useEffect(() => {
@@ -55,18 +56,41 @@ function About() {
               <div className="about-step-number">{item.step}</div>
               <div className="about-step-title">{item.title}</div>
               <div className="about-step-desc">{item.desc}</div>
-              <div className="about-step-arrow">
-                {idx < arr.length - 1
-                  ? <span>↓</span>
-                  : (
-                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg width="40" height="40" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
-                        <path d="M8 18h20" stroke="var(--speaking)" strokeWidth="5" strokeLinecap="round" opacity="0.3"/>
-                        <path d="M22 12l6 6-6 6" stroke="var(--speaking)" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" opacity="0.3"/>
-                      </svg>
-                    </span>
-                  )
-                }
+              <div className="about-step-arrow" style={{ width: '100%', minHeight: '2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {idx < arr.length - 1 && (
+                  <svg width="60" height="60" viewBox="0 0 83 83" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', margin: '0.5rem auto 0 auto', filter: 'drop-shadow(0 2px 8px rgba(255,215,0,0.18))' }}>
+                    <defs>
+                      <linearGradient id="arrow-gradient-gold" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#FFD700" />
+                        <stop offset="100%" stopColor="#fff8dc" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M10 41.5 Q41.5 75 73 41.5" stroke="url(#arrow-gradient-gold)" strokeWidth="5.5" fill="none" strokeLinecap="round" opacity="0.95"/>
+                    <path d="M67 35l12 6-12 6" stroke="url(#arrow-gradient-gold)" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" opacity="0.95"/>
+                  </svg>
+                )}
+                {idx === arr.length - 1 && (
+                  <NavLink to="/create" className="about-heart-link" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0.5rem auto 0 auto', textDecoration: 'none' }} title="Create a Room">
+                    <svg className="about-heart-svg" width="60" height="60" viewBox="0 0 83 83" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0 2px 8px rgba(167,139,250,0.18))', transition: 'transform 0.25s' }}>
+                      <defs>
+                        <linearGradient id="heart-gradient-dark" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stopColor="#FFD700" />
+                          <stop offset="100%" stopColor="#fff8dc" />
+                        </linearGradient>
+                        <linearGradient id="heart-gradient-light" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stopColor="#A78BFA" />
+                          <stop offset="100%" stopColor="#38BDF8" />
+                        </linearGradient>
+                      </defs>
+                      <path
+                        d="M41.5 70s-24-15.5-24-32.5C17.5 25.5 32 20 41.5 32.5 51 20 65.5 25.5 65.5 37.5c0 17-24 32.5-24 32.5z"
+                        fill={typeof window !== 'undefined' && document.body.getAttribute('data-theme') === 'light' ? 'url(#heart-gradient-light)' : 'url(#heart-gradient-dark)'}
+                        stroke="#222"
+                        strokeWidth="1"
+                      />
+                    </svg>
+                  </NavLink>
+                )}
               </div>
             </div>
           ))}
