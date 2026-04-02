@@ -110,6 +110,12 @@ npm run dev
 
 ## Recent Enhancements (Latest)
 
+### Real-Time Participant Count on Browse Page
+- **Instant Updates**: Participant count now updates in real-time using Socket.io instead of polling
+- **Reduced Server Load**: Eliminated 10-second polling interval, now using event-driven updates
+- **Better UX**: Users see immediate participant changes when someone joins or leaves
+- **Fallback Polling**: Still polls every 30 seconds as fallback for resilience
+
 ### Sub-Host Role System
 - **Multiple Sub-Hosts**: Host can assign multiple Sub-Hosts with hierarchical ranking (primary + backup roles)
 - **Automatic Promotion**: Sub-Host automatically promoted to Host if Host leaves and doesn't return within 5 minutes

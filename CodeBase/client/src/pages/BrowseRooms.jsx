@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import './BrowseRooms.css';
 import './shared.css';
 import { getRooms } from '../services/api';
+import { connectSocket } from '../services/socket';
 
 const categories = ['All', 'General', 'Study', 'Debate', 'Feedback', 'Chill'];
 
@@ -15,6 +16,7 @@ function BrowseRooms() {
   const [joinCode, setJoinCode] = useState('');
   const [joinError, setJoinError] = useState('');
   const navigate = useNavigate();
+  const socket = connectSocket();
 
   const handleJoinByCode = (e) => {
     e.preventDefault();
@@ -49,9 +51,69 @@ function BrowseRooms() {
 
   useEffect(() => {
     fetchRooms();
-    const interval = setInterval(fetchRooms, 10000); // auto-refresh every 10s
+    // Initial fetch + periodic refresh (reduced to 30s for less overhead)
+    const interval = setInterval(fetchRooms, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // Real-time participant count updates via Socket.io
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleUserJoined = ({ roomId, alias }) => {
+      setRooms(prevRooms =>
+        prevRooms.map(room =>
+          room._id === roomId
+            ? {
+                ...room,
+                participants: [
+                  ...room.participants,
+                  { alias, joinedAt: new Date(), leftAt: null }
+                ]
+              }
+            : room
+        )
+      );
+      console.log(`Real-time: ${alias} joined room ${roomId}`);
+    };
+
+    const handleUserLeft = ({ socketId, roomId }) => {
+      setRooms(prevRooms =>
+        prevRooms.map(room =>
+          room._id === roomId
+            ? {
+                ...room,
+                participants: room.participants.map(p =>
+                  p.socketId === socketId ? { ...p, leftAt: new Date() } : p
+                )
+              }
+            : room
+        )
+      );
+      console.log(`Real-time: User left room ${roomId}`);
+    };
+
+    const handleRoomUsers = ({ roomId, participants }) => {
+      setRooms(prevRooms =>
+        prevRooms.map(room =>
+          room._id === roomId
+            ? { ...room, participants }
+            : room
+        )
+      );
+      console.log(`Real-time: Updated participant list for room ${roomId}`);
+    };
+
+    socket.on('user-joined', handleUserJoined);
+    socket.on('user-left', handleUserLeft);
+    socket.on('room-users', handleRoomUsers);
+
+    return () => {
+      socket.off('user-joined', handleUserJoined);
+      socket.off('user-left', handleUserLeft);
+      socket.off('room-users', handleRoomUsers);
+    };
+  }, [socket]);
 
   const filtered = rooms
     .filter(r => activeCat === 'All' || r.category === activeCat)

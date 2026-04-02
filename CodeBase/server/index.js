@@ -175,6 +175,18 @@ io.on('connection', (socket) => {
     });
     
     participants.push({ socketId: socket.id, alias: cleanAlias });
+    
+    // Broadcast for Browse page real-time updates
+    io.to(roomId).emit('room-users', {
+      roomId,
+      participants: participants.map(p => ({ 
+        socketId: p.socketId, 
+        alias: p.alias, 
+        joinedAt: p.joinedAt, 
+        leftAt: p.leftAt 
+      }))
+    });
+    
     socket.to(roomId).emit('user-joined', { 
       socketId: socket.id, 
       alias: cleanAlias,
@@ -574,6 +586,17 @@ function _leaveRoom(socket, roomId) {
       _cleanupVote(roomId);
       Room.findByIdAndUpdate(roomId, { isActive: false }).catch(() => {});
       console.log(`Room ${roomId} closed — no participants remain`);
+    } else {
+      // Broadcast updated participant list for Browse page real-time updates
+      io.to(roomId).emit('room-users', {
+        roomId,
+        participants: participants.map(p => ({ 
+          socketId: p.socketId, 
+          alias: p.alias, 
+          joinedAt: p.joinedAt, 
+          leftAt: p.leftAt 
+        }))
+      });
     }
   }
   socket.to(roomId).emit('user-left', { socketId: socket.id });
