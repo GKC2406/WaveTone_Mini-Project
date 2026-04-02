@@ -10,7 +10,7 @@ WaveTone is a cutting-edge, anonymous voice room platform designed for real-time
 - **Anonymous Voice Rooms**: Connect without revealing your identity.
 - **Real-Time Communication**: Powered by WebRTC and Socket.io.
 - **Advanced Moderation**: Profanity filters, warning systems, and vote-kick mechanisms.
-- **AI-Powered Summaries**: Post-session summaries using Google Gemini.
+- **AI-Powered Summaries**: Post-session summaries using Groq SDK and fallback summaries.
 - **Customizable Rooms**: Set topics, categories, and participant limits.
 - **Responsive Design**: Optimized for both desktop and mobile.
 
@@ -26,7 +26,7 @@ WaveTone is a cutting-edge, anonymous voice room platform designed for real-time
 ### Backend
 - Node.js, Express.js, Socket.io
 - MongoDB Atlas, Mongoose
-- Google Gemini API, WebRTC
+- Groq SDK, WebRTC
 
 ---
 
@@ -60,7 +60,7 @@ CodeBase/
 ### Prerequisites
 - Node.js v18+
 - MongoDB Atlas account
-- Google AI Studio API key
+- Groq API Key
 
 ### Installation
 
@@ -79,7 +79,7 @@ cd ../server && npm install
 Create a `.env` file in `server/` with the following:
 ```
 MONGO_URI=your_mongodb_connection_string
-GEMINI_API_KEY=your_google_ai_studio_key
+GROQ_API_KEY=your_groq_api_key
 ```
 
 ### Run Locally
@@ -104,7 +104,7 @@ npm run dev
 
 ### Backend
 - Deploy `server/` to Railway or Render.
-- Set `MONGO_URI`, `GEMINI_API_KEY`, and `PORT`.
+- Set `MONGO_URI`, `GROQ_API_KEY`, and `PORT`.
 
 ---
 
