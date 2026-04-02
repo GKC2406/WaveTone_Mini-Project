@@ -1,0 +1,660 @@
+================================================================================
+                   WAVETONE - FEATURES YET TO IMPLEMENT
+================================================================================
+Last Updated: April 2, 2026
+This document lists all planned features and enhancements that are 
+not yet implemented in WaveTone.
+
+================================================================================
+PRIORITY 1 — IMPLEMENT SOON (High Value, Medium Effort)
+================================================================================
+
+1. AI-Powered Speech-to-Text Profanity Classification
+   Status: PLANNED
+   Effort: HIGH
+   Impact: HIGH
+   
+   What it does:
+   ✗ Replace current regex-based profanity detection with ML toxicity classifier
+   ✗ Use TensorFlow.js @tensorflow-models/toxicity for in-browser detection
+   ✗ OR integrate Claude Haiku API for advanced classification (~$0.001/call)
+   ✗ Catches contextual toxicity that keyword lists miss
+   ✗ Handles slang, accents, and word variations automatically
+   
+   Pros:
+   - More accurate than keyword matching
+   - Handles contextual profanity better
+   - Reduces false positives and false negatives
+   
+   Cons:
+   - Increased latency risk
+   - API dependency if not using TensorFlow.js locally
+   - Increased debugging complexity
+   - Additional training/tuning may be needed
+   
+   Recommended Approach:
+   - Start with TensorFlow.js local model (no API dependency)
+   - Keep latency under 600ms target
+   - Fallback to regex if model load fails
+   
+   Implementation File: client/src/audio/AIToxicityDetector.js (NEW)
+
+
+2. AI-Based Disruptive Behavior Detection
+   Status: PLANNED
+   Effort: MEDIUM
+   Impact: HIGH
+   
+   What it does:
+   ✗ Analyze user behavior patterns (not speech content)
+   ✗ Detect interruptions, excessive talking, volume spikes
+   ✗ Identify long continuous monologues
+   ✗ Issue warnings for disruptive behavior independently
+   ✗ Support moderation even without profanity detection
+   
+   Inputs for AI Analysis:
+   - Speaking frequency (percentage of room speaking time)
+   - Number of interruptions (overlaps with other speakers)
+   - Volume consistency (spikes above threshold)
+   - Monologue duration (speaking time >30 seconds continuously)
+   
+   Pros:
+   - Privacy-preserving (only metadata, no speech content)
+   - Highly unique feature
+   - Supports vote-kick and moderation systems
+   - Academically defensible
+   
+   Cons:
+   - Requires behavior data collection over time
+   - Slightly abstract to explain to users
+   - Fine-tuning thresholds needed per room type
+   
+   Implementation Files:
+   - client/src/audio/BehaviorAnalyzer.js (NEW)
+   - server/src/utils/behaviorModeration.js (NEW)
+
+
+3. Conversation Phase Control (Intro/Discussion/Summary)
+   Status: PLANNED
+   Effort: MEDIUM
+   Impact: MEDIUM-HIGH
+   
+   What it does:
+   ✗ Divide rooms into defined phases:
+      - Intro Phase (2 minutes): Introductions only, no off-topic discussion
+      - Open Discussion (configurable): Main discussion period
+      - Summary Phase (1 minute): Wrap-up and key takeaways
+   ✗ Different moderation rules per phase
+   ✗ Phase-specific restrictions (e.g., no kicks during Intro)
+   ✗ Server manages automatic phase transitions with timers
+   ✗ Visual indicators show current phase and time remaining
+   
+   Why it matters:
+   - Enforces structured, focused conversations
+   - Unique system design innovation (not generic chat)
+   - Improves room productivity and engagement
+   - Academic appeal for project documentation
+   
+   Implementation Files:
+   - server/src/utils/phaseManager.js (NEW)
+   - client/src/pages/VoiceRoom.jsx (MODIFY - add phase UI)
+   - server/index.js (MODIFY - phase event handlers)
+   
+   Notes:
+   - Phase durations can be configured per room
+   - No AI required — pure system design
+
+
+4. Adaptive Moderation Thresholds Per Room Type
+   Status: PLANNED
+   Effort: LOW-MEDIUM
+   Impact: MEDIUM
+   
+   What it does:
+   ✗ Adjust moderation rules based on room category
+   ✗ Calm/Study rooms: stricter profanity thresholds
+   ✗ Debate rooms: slightly relaxed thresholds (allow more discourse)
+   ✗ Feedback rooms: moderate thresholds
+   ✗ Chill rooms: even more relaxed (trust-based moderation)
+   
+   Pros:
+   - Context-aware moderation
+   - Flexible governance model
+   - Room-type specific customization
+   
+   Cons:
+   - Requires careful tuning to avoid confusion
+   - Needs clear communication to users
+   
+   Implementation:
+   - server/src/config/moderationThresholds.js (NEW)
+   - Modify warning system to use room-based thresholds
+
+
+================================================================================
+PRIORITY 2 — IMPLEMENT NEXT (Medium Value, Low Effort)
+================================================================================
+
+5. Room Timer with Auto-Close
+   Status: PLANNED
+   Effort: LOW
+   Impact: MEDIUM
+   
+   What it does:
+   ✗ Set max duration for rooms (configurable: 30-120 minutes)
+   ✗ Visual countdown timer in room UI
+   ✗ Auto-close room when timer expires
+   ✗ Warning notifications at 5-minute and 1-minute marks
+   ✗ Force disconnect all participants
+   ✗ Redirect users to PostRoomSummary with stats
+   
+   Benefits:
+   - Prevents infinite sessions
+   - Helps manage server resources
+   - Natural endpoint for conversations
+   
+   Implementation:
+   - server/src/utils/roomTimer.js (NEW)
+   - client/src/pages/VoiceRoom.jsx (MODIFY - add timer UI)
+
+
+6. AI-Generated Conversation Summary (Post-Room)
+   Status: PLANNED
+   Effort: MEDIUM
+   Impact: HIGH
+   
+   What it does:
+   ✗ After room expires, AI generates a brief textual summary
+   ✗ Summary includes key discussion points (not full transcript)
+   ✗ Analysis based only on timestamps and speaker metadata
+   ✗ No audio is permanently stored
+   ✗ Display summary on PostRoomSummary page
+   ✗ Option for users to download summary
+   
+   Pros:
+   - Extremely impressive feature for portfolio
+   - Highly useful for study and discussion rooms
+   - Privacy-preserving (no content storage)
+   - Academic credibility
+   
+   Cons:
+   - Requires careful privacy framing
+   - API dependency (Claude Haiku or similar)
+   - Cost per summary generation
+   
+   Implementation:
+   - server/src/utils/summaryGenerator.js (NEW)
+   - server/src/routes/summaryRoutes.js (MODIFY)
+   - client/src/pages/PostRoomSummary.jsx (MODIFY - add summary display)
+   
+   Note: This appears to already be partially implemented. 
+   Enhance existing implementation with AI features.
+
+
+7. AI-Based Speaker Balance Insight
+   Status: PLANNED
+   Effort: LOW-MEDIUM
+   Impact: MEDIUM
+   
+   What it does:
+   ✗ Post-room analytics showing:
+      - "Conversation dominated by 2 speakers (60% of speaking time)"
+      - "Participation was evenly distributed (all speakers within 15%)"
+      - "One silent participant"
+      - "Average speaking turn: 45 seconds"
+   ✗ Analysis based only on audio metadata
+   ✗ No speech content analyzed or stored
+   ✗ Display on PostRoomSummary with visual charts
+   
+   Pros:
+   - Provides valuable user insights
+   - Educational feedback
+   - Privacy-preserving
+   
+   Implementation:
+   - server/src/utils/speakerAnalytics.js (NEW)
+   - client/src/components/SpeakerInsights.jsx (NEW)
+
+
+8. Smart Vote-Kick Assistance (AI-lite)
+   Status: PLANNED
+   Effort: LOW
+   Impact: LOW-MEDIUM
+   
+   What it does:
+   ✗ AI highlights moderation-relevant patterns:
+      - "This user has received the most complaints"
+      - "This user frequently violates topic focus"
+      - "Speaking interruptions: X% above average"
+   ✗ Final moderation decisions always made by users
+   ✗ AI only provides context for better decisions
+   
+   Benefits:
+   - Empowers users with data
+   - Fairer vote-kick decisions
+   - Transparent moderation process
+   
+   Implementation:
+   - Enhance existing vote-kick UI with data display
+
+
+================================================================================
+PRIORITY 3 — NICE TO HAVE (Low Effort, Polish)
+================================================================================
+
+9. Enhanced Audio Quality Metrics
+   Status: PLANNED
+   Effort: LOW
+   Impact: LOW-MEDIUM
+   
+   What it does:
+   ✗ Display connection quality indicators
+   ✗ Show network latency to each peer
+   ✗ Audio codec information
+   ✗ Bitrate display for current connection
+   ✗ Troubleshooting suggestions for poor connection
+   
+   Implementation: client/src/components/ConnectionStats.jsx (NEW)
+
+
+10. Room Activity Replay (Metadata Only)
+    Status: PLANNED
+    Effort: MEDIUM
+    Impact: LOW
+    
+    What it does:
+    ✗ Log room activity (joins, leaves, kicks, warnings) with timestamps
+    ✗ Replay activity timeline in PostRoomSummary
+    ✗ Show who spoke when (anonymized)
+    ✗ Timeline visualization of room events
+    
+    Note: No audio replay, only metadata timeline
+
+
+11. User Feedback System
+    Status: PLANNED
+    Effort: LOW
+    Impact: MEDIUM
+    
+    What it does:
+    ✗ Post-room survey asking about experience
+    ✗ Rate room quality (1-5 stars)
+    ✗ Report problematic users (anonymously)
+    ✗ Suggest moderation changes
+    ✗ Feedback used to improve room quality metrics
+    
+    Implementation: client/src/components/RoomFeedbackForm.jsx (NEW)
+
+
+12. Room Recommendation Engine
+    Status: PLANNED
+    Effort: MEDIUM
+    Impact: LOW-MEDIUM
+    
+    What it does:
+    ✗ Recommend rooms based on user history
+    ✗ "Rooms similar to ones you've joined"
+    ✗ Suggest rooms at optimal times (based on participation patterns)
+    ✗ Personalized category suggestions
+    
+    Note: Maintain anonymity while tracking room preferences
+
+
+13. Profanity Filter Enhancement
+    Status: FUTURE
+    Effort: LOW
+    Impact: LOW
+    
+    What it does:
+    ✗ Expanded profanity word list with regional variations
+    ✗ Support for profanities in multiple languages
+    ✗ Cultural context awareness
+    ✗ User-reported new profanities added to filter
+    
+    Benefits:
+    - More comprehensive filtering
+    - Cultural sensitivity
+
+
+14. Room Presets & Templates
+    Status: PLANNED
+    Effort: LOW
+    Impact: MEDIUM
+    
+    What it does:
+    ✗ Pre-configured room templates:
+       - "Study Group" (strict moderation, summary enabled)
+       - "Casual Chat" (relaxed moderation, no timer)
+       - "Debate" (structured phases, voting enabled)
+       - "Feedback Session" (speaker balance analysis)
+    ✗ One-click room creation with presets
+    ✗ Users can customize presets
+    
+    Implementation: client/src/pages/CreateRoom.jsx (MODIFY)
+
+
+15. Mobile App Companion
+    Status: FUTURE
+    Effort: HIGH
+    Impact: MEDIUM
+    
+    What it does:
+    ✗ Native iOS/Android mobile app
+    ✗ Better audio handling on mobile
+    ✗ Push notifications for room invites
+    ✗ Optimized UI for small screens
+    
+    Note: Future enhancement, current web app is responsive
+
+
+================================================================================
+PRIORITY 4 — ADVANCED FEATURES (Research/Academic)
+================================================================================
+
+16. Network Traffic Analysis & Optimization
+    Status: PLANNED
+    Effort: MEDIUM
+    Impact: MEDIUM
+    
+    What it does:
+    ✗ Analyze WebRTC connection quality
+    ✗ Suggest optimal audio codec based on network
+    ✗ Implement adaptive bitrate control
+    ✗ Bandwidth optimization for poor connections
+    
+    Benefits:
+    - Better experience for users with poor networks
+    - Server scalability improvement
+
+
+17. Machine Learning Model for Optimal Room Size
+    Status: FUTURE
+    Effort: HIGH
+    Impact: LOW-MEDIUM
+    
+    What it does:
+    ✗ Analyze conversation quality vs room size
+    ✗ Train model on historical data
+    ✗ Recommend optimal max size for different room types
+    ✗ Auto-adjust settings for new rooms
+    
+    Note: Requires significant data collection
+
+
+18. Accessibility Enhancements
+    Status: PLANNED
+    Effort: LOW-MEDIUM
+    Impact: MEDIUM
+    
+    What it does:
+    ✗ Real-time speech-to-text captions for deaf users
+    ✗ Text-to-speech for blind users (room events)
+    ✗ Keyboard navigation optimization
+    ✗ Screen reader compatibility improvements
+    ✗ WCAG 2.1 AA compliance
+    
+    Benefits:
+    - Inclusive platform
+    - Expanded user base
+    - Legal/ethical compliance
+
+
+19. Blockchain-Based Moderation History (Optional)
+    Status: RESEARCH
+    Effort: HIGH
+    Impact: LOW
+    
+    What it does:
+    ✗ Immutable record of moderation actions (kicks, warnings)
+    ✗ Public audit trail for transparency
+    ✗ Blockchain timestamp verification
+    
+    Pros:
+    - Maximum transparency
+    - Prevents appeal disputes
+    
+    Cons:
+    - Privacy concerns
+    - Over-engineering for scope
+    - Complex to explain
+
+
+================================================================================
+PRIORITY 5 — EXPERIMENTAL/RESEARCH (Exploratory)
+================================================================================
+
+20. Real-Time Sentiment Analysis
+    Status: RESEARCH
+    Effort: MEDIUM
+    Impact: LOW
+    
+    What it does:
+    ✗ Analyze room sentiment (positive/negative/neutral)
+    ✗ Track sentiment change over time
+    ✗ Suggest break if sentiment too negative
+    ✗ Insights on conversation tone
+    
+    Note: Privacy concerns, would require speech analysis
+
+
+21. Voice Authentication (Optional Advanced Feature)
+    Status: RESEARCH
+    Effort: HIGH
+    Impact: LOW
+    
+    What it does:
+    ✗ Optional voice biometric enrollment
+    ✗ Verify user identity across sessions (if desired)
+    ✗ Enhanced security for private rooms
+    
+    Cons:
+    - Privacy concerns
+    - Contradicts anonymity model
+    - Requires opt-in from users
+
+
+22. Spatial Audio Experience
+    Status: RESEARCH
+    Effort: MEDIUM
+    Impact: LOW-MEDIUM
+    
+    What it does:
+    ✗ 3D spatial audio positioning
+    ✗ Audio from different speakers comes from different directions
+    ✗ Head tracking support (VR headsets)
+    ✗ Enhanced immersive experience
+    
+    Benefits:
+    - Novel user experience
+    - Research credibility
+
+
+================================================================================
+INFRASTRUCTURE & DEVOPS
+================================================================================
+
+23. Advanced Analytics & Monitoring
+    Status: PLANNED
+    Effort: MEDIUM
+    Impact: MEDIUM
+    
+    What it does:
+    ✗ Comprehensive analytics dashboard (admin only)
+    ✗ Room statistics and trends
+    ✗ User engagement metrics
+    ✗ Moderation action tracking
+    ✗ Performance monitoring
+    ✗ Error tracking and alerting
+    
+    Implementation:
+    - server/src/routes/analyticsRoutes.js (NEW)
+    - client/src/pages/AdminDashboard.jsx (NEW)
+
+
+24. Database Optimization
+    Status: PLANNED
+    Effort: MEDIUM
+    Impact: MEDIUM
+    
+    What it does:
+    ✗ Implement database indexing for better query performance
+    ✗ Archive old room records for faster queries
+    ✗ Implement caching layer (Redis)
+    ✗ Query optimization for room browsing
+    
+    Benefits:
+    - Improved response times
+    - Better scalability
+    - Reduced server load
+
+
+25. Load Testing & Stress Testing
+    Status: PLANNED
+    Effort: MEDIUM
+    Impact: HIGH
+    
+    What it does:
+    ✗ Load testing with 100+ concurrent rooms
+    ✗ Stress test WebRTC connection limits
+    ✗ Capacity planning based on results
+    ✗ Performance bottleneck identification
+
+
+26. Docker Containerization
+    Status: PLANNED
+    Effort: LOW
+    Impact: MEDIUM
+    
+    What it does:
+    ✗ Containerize backend with Docker
+    ✗ Docker Compose for full stack deployment
+    ✗ Kubernetes orchestration (future)
+    ✗ Easy deployment across environments
+    
+    Benefits:
+    - Consistent environments
+    - Easy scaling
+    - Simplified deployment
+
+
+================================================================================
+DOCUMENTATION & SUPPORT
+================================================================================
+
+27. User Documentation
+    Status: PARTIALLY DONE
+    Effort: MEDIUM
+    Impact: MEDIUM
+    
+    What needs to be done:
+    ✗ Comprehensive user guide
+    ✗ Video tutorials
+    ✗ FAQ section
+    ✗ Troubleshooting guide
+    ✗ Best practices for room hosting
+    ✗ Community guidelines
+
+
+28. API Documentation
+    Status: PARTIALLY DONE
+    Effort: LOW
+    Impact: MEDIUM
+    
+    What needs to be done:
+    ✗ Complete OpenAPI/Swagger documentation
+    ✗ Socket.io event documentation
+    ✗ Example requests and responses
+    ✗ Rate limiting documentation
+    ✗ Authentication guides
+
+
+29. Academic Research Paper
+    Status: PLANNED
+    Effort: HIGH
+    Impact: HIGH
+    
+    What it does:
+    ✗ Publish research paper on WaveTone architecture
+    ✗ Focus on privacy-preserving profanity detection
+    ✗ Anonymous moderation systems
+    ✗ WebRTC optimization techniques
+    ✗ Submit to conferences/journals
+
+
+================================================================================
+BUGFIXES & IMPROVEMENTS (Known Issues)
+================================================================================
+
+30. Audio Worklet Browser Support
+    Current Issue: AudioWorklet not available in older browsers
+    Status: NEEDS IMPROVEMENT
+    Fix Required:
+    ✗ Better fallback for browsers without AudioWorklet support
+    ✗ Graceful degradation to ScriptProcessor
+    ✗ User notification of limited functionality
+
+
+31. Speech Recognition Accuracy
+    Current Issue: Browser speech recognition may miss or mistranscribe words
+    Status: NEEDS IMPROVEMENT
+    Fix Required:
+    ✗ Improve transcription accuracy with context hints
+    ✗ Multiple language support
+    ✗ Accent adaptation
+
+
+32. Network Latency Management
+    Current Issue: High latency in some geographic regions
+    Status: NEEDS IMPROVEMENT
+    Fix Required:
+    ✗ Add regional STUN servers
+    ✗ Implement TURN server for NAT traversal
+    ✗ Adaptive codec selection based on network
+
+
+================================================================================
+SUMMARY OF PENDING WORK
+================================================================================
+
+Total Features Pending: 32
+
+Quick Implementation (Low Effort):
+- Real-time Sentiment Analysis
+- Enhanced Audio Quality Metrics
+- Room Presets & Templates
+- User Feedback System
+(Estimated: 2-3 weeks)
+
+Medium Implementation (Medium Effort):
+- AI Speech-to-Text Classification
+- Conversation Phase Control
+- AI-Generated Conversation Summary
+- Accessibility Enhancements
+(Estimated: 4-6 weeks)
+
+Complex Implementation (High Effort):
+- Disruptive Behavior Detection
+- Advanced Analytics & Monitoring
+- Mobile App Companion
+(Estimated: 8-12 weeks)
+
+Research/Exploratory:
+- Blockchain Moderation History
+- Voice Authentication
+- Spatial Audio Experience
+(Estimated: Ongoing research)
+
+================================================================================
+RECOMMENDATION FOR NEXT SPRINT
+================================================================================
+
+1. Prioritize Conversation Phase Control (high academic value)
+2. Add Room Timer with Auto-Close (quick win)
+3. Implement AI-Generated Summary (portfolio impressive)
+4. Enhance accessibility features (inclusive design)
+5. Add analytics dashboard (monitor system health)
+
+These features would significantly enhance the project's academic appeal
+and user experience while maintaining the privacy-first philosophy.
+
+================================================================================
