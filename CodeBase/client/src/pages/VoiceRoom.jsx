@@ -37,6 +37,7 @@ function VoiceRoom() {
   const [micError, setMicError] = useState(null);
   const [warningCount, setWarningCount] = useState(0);
   const [warningToast, setWarningToast] = useState(null);
+  const [toastType, setToastType] = useState('warning'); // 'warning', 'kick', 'info'
 
   // Vote-kick state
   const [voteKick, setVoteKick] = useState(null);
@@ -258,8 +259,24 @@ function VoiceRoom() {
       });
 
       // Kicked (with reason)
-      socket.on('kicked', ({ reason } = {}) => {
-        navigate('/', { state: { kickReason: reason || 'You were removed from the room.' } });
+      socket.on('kicked', ({ reason, code } = {}) => {
+        if (!active) return;
+        
+        // Show kick notification before redirect with emphasis
+        setWarningToast(reason || 'You were removed from the room.');
+        setToastType('kick');
+        
+        // Log the kick details
+        console.log('🚫 Kicked from room:', {
+          reason,
+          code,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Redirect after 3 seconds so user can read the message
+        setTimeout(() => {
+          navigate('/', { state: { kickReason: reason || 'You were removed from the room.', kickCode: code } });
+        }, 3000);
       });
 
       // Profanity warning issued
@@ -267,6 +284,7 @@ function VoiceRoom() {
         if (!active) return;
         setWarningCount(count);
         setWarningToast(`Profanity warning ${count}/${maxWarnings}. Watch your language!`);
+        setToastType('warning');
         setTimeout(() => setWarningToast(null), 4000);
       });
 
@@ -292,6 +310,7 @@ function VoiceRoom() {
       socket.on('vote-kick-error', ({ message }) => {
         if (!active) return;
         setWarningToast(message);
+        setToastType('warning');
         setTimeout(() => setWarningToast(null), 3000);
       });
     };
@@ -415,9 +434,29 @@ function VoiceRoom() {
         </div>
       )}
 
-      {/* Warning toast */}
+      {/* Warning/Kick toast */}
       {warningToast && (
-        <div style={{ background: 'rgba(248,113,113,0.1)', border: '1.5px solid var(--warning)', borderRadius: '8px', padding: '0.6rem 1rem', marginBottom: '1rem', color: 'var(--warning)', fontSize: '0.85rem', fontWeight: 600, animation: 'fadeIn 0.3s ease' }}>
+        <div style={{
+          background: toastType === 'kick' ? 'rgba(239,68,68,0.15)' : 'rgba(248,113,113,0.1)',
+          border: `1.5px solid ${toastType === 'kick' ? '#ef4444' : 'var(--warning)'}`,
+          borderRadius: '8px',
+          padding: toastType === 'kick' ? '0.8rem 1.2rem' : '0.6rem 1rem',
+          marginBottom: '1rem',
+          color: toastType === 'kick' ? '#ef4444' : 'var(--warning)',
+          fontSize: toastType === 'kick' ? '0.95rem' : '0.85rem',
+          fontWeight: toastType === 'kick' ? 700 : 600,
+          animation: 'fadeIn 0.3s ease',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.6rem'
+        }}>
+          {toastType === 'kick' && (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="15" y1="9" x2="9" y2="15"/>
+              <line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+          )}
           {warningToast}
         </div>
       )}
