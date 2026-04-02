@@ -55,6 +55,12 @@ const WARNING_AUTO_VOTE_THRESHOLD = 2; // Auto-start vote-kick after 2 warnings
 const WARNING_RATE_LIMIT_MS = 500; // Reduced from 2000ms for faster detection
 const VOTE_TIMEOUT_MS = 30000;
 const VOTE_THRESHOLD = 0.7;
+const HOST_RETURN_TIMEOUT_MS = 300000; // 5 minutes for Host to return before Sub-Host promotion
+
+// Host and Sub-Host state
+const roomHosts = new Map(); // roomId → { socketId, alias }
+const roomSubHosts = new Map(); // roomId → [{ socketId, alias, rank }]
+const hostTimeoutHandles = new Map(); // roomId → timeoutHandle
 
 function _getIP(socket) {
   return socket.handshake.headers['x-forwarded-for']?.split(',')[0]?.trim()
@@ -69,8 +75,35 @@ function _banAndKick(socket, roomId, reason, isGlobalBan = false) {
     globalBannedIPs.add(ip);
     console.log(`IP ${ip} added to global ban list`);
   }
-  socket.emit('kicked', { reason });
+  
+  // Professional kick message
+  const professionalkickMsg = `You have been removed from the room: ${reason}`;
+  socket.emit('kicked', { 
+    reason: professionalkickMsg,
+    code: 'KICK_REMOVED',
+    timestamp: new Date().toISOString()
+  });
   _leaveRoom(socket, roomId);
+}
+
+function _promoteSubHostToHost(roomId) {
+  if (!roomSubHosts.has(roomId)) return;
+  const subHosts = roomSubHosts.get(roomId);
+  
+  if (subHosts.length > 0) {
+    // Promote highest-ranking (lowest index) sub-host
+    const newHost = subHosts[0];
+    roomHosts.set(roomId, { socketId: newHost.socketId, alias: newHost.alias });
+    subHosts.shift(); // Remove from sub-hosts list
+    
+    io.to(roomId).emit('host-promoted', {
+      newHostAlias: newHost.alias,
+      reason: 'Previous Host left the room',
+      subHosts: subHosts
+    });
+    
+    console.log(`Sub-Host ${newHost.alias} promoted to Host in room ${roomId}`);
+  }
 }
 
 // --- Socket.io signaling ---
@@ -117,8 +150,15 @@ io.on('connection', (socket) => {
 
     // Assign 'Host' only to the first participant, others get their alias or 'Anonymous'
     let cleanAlias;
+    let isHost = false;
     if (participants.length === 0) {
       cleanAlias = 'Host';
+      isHost = true;
+      roomHosts.set(roomId, { socketId: socket.id, alias: cleanAlias });
+      if (hostTimeoutHandles.has(roomId)) {
+        clearTimeout(hostTimeoutHandles.get(roomId));
+        hostTimeoutHandles.delete(roomId);
+      }
     } else {
       cleanAlias = alias && alias !== 'Host' ? (containsProfanity(alias) ? filterProfanity(alias) : alias) : 'Anonymous';
     }
@@ -127,10 +167,82 @@ io.on('connection', (socket) => {
     socketAliases.set(socket.id, cleanAlias);
 
     socket.emit('room-users', participants);
+    socket.emit('room-metadata', { 
+      isHost, 
+      hostInfo: isHost ? { alias: cleanAlias } : roomHosts.get(roomId) || null,
+      subHosts: roomSubHosts.get(roomId) || [],
+      hostReturnTimeout: HOST_RETURN_TIMEOUT_MS
+    });
+    
     participants.push({ socketId: socket.id, alias: cleanAlias });
-    socket.to(roomId).emit('user-joined', { socketId: socket.id, alias: cleanAlias });
+    socket.to(roomId).emit('user-joined', { 
+      socketId: socket.id, 
+      alias: cleanAlias,
+      isHost,
+      hostReturnTimeout: HOST_RETURN_TIMEOUT_MS
+    });
 
-    console.log(`${cleanAlias} (${socket.id}) [${ip}] joined room ${roomId}`);
+    console.log(`${cleanAlias} (${socket.id}) [${ip}] joined room ${roomId}. IsHost: ${isHost}`);
+  });
+
+  // ==================== ASSIGN SUB-HOST (Host only) ====================
+  socket.on('assign-sub-host', ({ roomId, targetSocketId, targetAlias, rank = 0 }) => {
+    const host = roomHosts.get(roomId);
+    if (!host || host.socketId !== socket.id) {
+      socket.emit('error', { message: 'Only the Host can assign Sub-Hosts.' });
+      return;
+    }
+
+    if (!roomSubHosts.has(roomId)) roomSubHosts.set(roomId, []);
+    const subHosts = roomSubHosts.get(roomId);
+    
+    // Check if already a sub-host
+    const existing = subHosts.find(s => s.socketId === targetSocketId);
+    if (existing) {
+      socket.emit('error', { message: 'User is already a Sub-Host.' });
+      return;
+    }
+
+    const newSubHost = {
+      socketId: targetSocketId,
+      alias: targetAlias,
+      rank: rank || 0,
+      assignedAt: new Date()
+    };
+    subHosts.push(newSubHost);
+    subHosts.sort((a, b) => a.rank - b.rank);
+
+    io.to(roomId).emit('sub-host-assigned', {
+      hostAlias: host.alias,
+      subHostAlias: targetAlias,
+      rank: rank,
+      subHosts: subHosts
+    });
+
+    console.log(`Sub-Host assigned: ${targetAlias} (rank ${rank}) in room ${roomId}`);
+  });
+
+  // ==================== REVOKE SUB-HOST (Host only) ====================
+  socket.on('revoke-sub-host', ({ roomId, targetSocketId, targetAlias }) => {
+    const host = roomHosts.get(roomId);
+    if (!host || host.socketId !== socket.id) {
+      socket.emit('error', { message: 'Only the Host can revoke Sub-Hosts.' });
+      return;
+    }
+
+    if (!roomSubHosts.has(roomId)) return;
+    const subHosts = roomSubHosts.get(roomId);
+    
+    const index = subHosts.findIndex(s => s.socketId === targetSocketId);
+    if (index !== -1) {
+      subHosts.splice(index, 1);
+      io.to(roomId).emit('sub-host-revoked', {
+        hostAlias: host.alias,
+        formerSubHostAlias: targetAlias,
+        subHosts: subHosts
+      });
+      console.log(`Sub-Host revoked: ${targetAlias} from room ${roomId}`);
+    }
   });
 
   // ==================== LEAVE ROOM ====================
@@ -153,18 +265,23 @@ io.on('connection', (socket) => {
 
   // ==================== HOST KICK ====================
   socket.on('kick-user', ({ roomId, targetSocketId }) => {
-    // Only allow Host to kick
-    const participants = roomParticipants.get(roomId);
-    if (!participants) return;
-    const host = participants[0];
-    if (!host || host.socketId !== socket.id) {
-      // Not the host, ignore
+    // Verify Host by checking roomHosts map
+    const hostInfo = roomHosts.get(roomId);
+    if (!hostInfo || hostInfo.socketId !== socket.id) {
+      socket.emit('error', { message: 'Only the Host can kick users.' });
       return;
     }
+    
     const targetSocket = io.sockets.sockets.get(targetSocketId);
     if (targetSocket) {
-      _banAndKick(targetSocket, roomId, 'You have been kicked from this room.');
-      console.log(`Host kicked ${targetSocketId} from room ${roomId}`);
+      const targetAlias = socketAliases.get(targetSocketId) || 'User';
+      _banAndKick(targetSocket, roomId, `You have been removed by the Host (${hostInfo.alias}) for moderation reasons.`);
+      io.to(roomId).emit('user-kicked', { 
+        targetAlias,
+        hostAlias: hostInfo.alias,
+        reason: 'Removed by Host'
+      });
+      console.log(`Host ${hostInfo.alias} kicked ${targetAlias} from room ${roomId}`);
     }
   });
 
@@ -350,16 +467,20 @@ io.on('connection', (socket) => {
 
       const targetSocket = io.sockets.sockets.get(session.targetSocketId);
       if (targetSocket) {
-        _banAndKick(targetSocket, roomId, 'You were vote-kicked by the room.');
+        _banAndKick(targetSocket, roomId, `You were vote-kicked from this room by participants (${session.votes.size}/${requiredVotes} votes).`);
       }
 
       io.to(roomId).emit('vote-kick-ended', {
-        targetSocketId: session.targetSocketId, targetAlias: session.targetAlias,
-        result: 'passed', reason: 'Vote passed.',
+        targetSocketId: session.targetSocketId, 
+        targetAlias: session.targetAlias,
+        result: 'passed', 
+        reason: `Vote passed: ${session.votes.size} participants voted to remove ${session.targetAlias}.`,
+        voteCount: session.votes.size,
+        requiredVotes: requiredVotes
       });
 
       activeVotes.delete(roomId);
-      console.log(`Vote-kick passed for ${session.targetAlias} in room ${roomId}`);
+      console.log(`Vote-kick passed for ${session.targetAlias} in room ${roomId}. Votes: ${session.votes.size}/${requiredVotes}`);
     }
   });
 
@@ -399,9 +520,57 @@ function _leaveRoom(socket, roomId) {
 
     _cleanupVote(roomId, socket.id);
 
+    // Check if Host left
+    const host = roomHosts.get(roomId);
+    if (host && host.socketId === socket.id) {
+      console.log(`Host ${host.alias} left room ${roomId}`);
+      
+      // Start timeout to allow Host to return before Sub-Host promotion
+      const timeoutHandle = setTimeout(() => {
+        // Check if Host still hasn't returned
+        const hostNow = roomHosts.get(roomId);
+        if (!hostNow || hostNow.socketId === host.socketId) {
+          // Promote Sub-Host if available
+          _promoteSubHostToHost(roomId);
+        }
+        hostTimeoutHandles.delete(roomId);
+      }, HOST_RETURN_TIMEOUT_MS);
+      
+      hostTimeoutHandles.set(roomId, timeoutHandle);
+      
+      // Notify room about Host departure
+      io.to(roomId).emit('host-left', {
+        formerHostAlias: host.alias,
+        timeoutSeconds: HOST_RETURN_TIMEOUT_MS / 1000,
+        hasSubHosts: (roomSubHosts.get(roomId) || []).length > 0
+      });
+    }
+
+    // Check if Sub-Host left
+    if (roomSubHosts.has(roomId)) {
+      const subHosts = roomSubHosts.get(roomId);
+      const subHostIdx = subHosts.findIndex(sh => sh.socketId === socket.id);
+      if (subHostIdx !== -1) {
+        const formerSubHost = subHosts[subHostIdx];
+        subHosts.splice(subHostIdx, 1);
+        
+        io.to(roomId).emit('sub-host-left', {
+          formerSubHostAlias: formerSubHost.alias,
+          subHosts: subHosts
+        });
+        console.log(`Sub-Host ${formerSubHost.alias} left room ${roomId}`);
+      }
+    }
+
     if (participants.length === 0) {
       roomParticipants.delete(roomId);
       roomBannedIPs.delete(roomId);
+      roomHosts.delete(roomId);
+      roomSubHosts.delete(roomId);
+      if (hostTimeoutHandles.has(roomId)) {
+        clearTimeout(hostTimeoutHandles.get(roomId));
+        hostTimeoutHandles.delete(roomId);
+      }
       _cleanupVote(roomId);
       Room.findByIdAndUpdate(roomId, { isActive: false }).catch(() => {});
       console.log(`Room ${roomId} closed — no participants remain`);

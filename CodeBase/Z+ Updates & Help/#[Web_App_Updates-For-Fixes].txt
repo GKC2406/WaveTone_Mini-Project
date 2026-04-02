@@ -1,3 +1,32 @@
+## Future Enhancements
+
+- [ ] AI behavior detection (interruptions, volume spikes, monologues)
+- [ ] Adaptive moderation thresholds per room category
+- [ ] Room timer with auto-close
+- [ ] Conversation phase control (Intro / Discussion / Summary)
+- [ ] TensorFlow.js toxicity model (upgrade from regex)
+
+
+   7> AI Speech-to-Text Profanity Classification (Option A from docs)
+   Status: FUTURE — upgrade over keyword matching
+
+   What it does:
+   > Replace regex-based profanity check with ML toxicity classifier
+   > TensorFlow.js @tensorflow-models/toxicity runs in-browser
+   > OR send text chunks to Claude Haiku API (~$0.001/call, ~200ms response)
+   > Catches contextual toxicity that keyword lists miss
+
+
+   11> Conversation Phase Control With Room Timers
+    Status: FUTURE — unique system design feature
+
+    What it does:
+    > Rooms divided into phases: Intro (2 min) → Open Discussion → Summary (1 min)
+    > Different rules per phase (e.g., no kicks during Intro)
+    > Server manages phase transitions with timers
+    > No AI required — pure system design innovation
+
+#Things Below Are Already Implemented
 
 You should see a proper professional message when you get kicked by the Host or get vote kicked
 
@@ -30,14 +59,10 @@ Consider muting audio slightly before the detected word if possible, or increasi
 => Suggestion from Suneet => Consider using a more robust profanity detection library or API that can handle a wider range of inputs and provide more accurate results. This would improve the overall user experience by reducing the likelihood of profanity being heard during a session.
 
 
+Done !-->
 
-## Future Enhancements
 
-- [ ] AI behavior detection (interruptions, volume spikes, monologues)
-- [ ] Adaptive moderation thresholds per room category
-- [ ] Room timer with auto-close
-- [ ] Conversation phase control (Intro / Discussion / Summary)
-- [ ] TensorFlow.js toxicity model (upgrade from regex)
+
 
 
 
@@ -86,24 +111,7 @@ Consider muting audio slightly before the detected word if possible, or increasi
 
 
 
-   7> AI Speech-to-Text Profanity Classification (Option A from docs)
-   Status: FUTURE — upgrade over keyword matching
 
-   What it does:
-   > Replace regex-based profanity check with ML toxicity classifier
-   > TensorFlow.js @tensorflow-models/toxicity runs in-browser
-   > OR send text chunks to Claude Haiku API (~$0.001/call, ~200ms response)
-   > Catches contextual toxicity that keyword lists miss
-
-
-   11> Conversation Phase Control With Room Timers
-    Status: FUTURE — unique system design feature
-
-    What it does:
-    > Rooms divided into phases: Intro (2 min) → Open Discussion → Summary (1 min)
-    > Different rules per phase (e.g., no kicks during Intro)
-    > Server manages phase transitions with timers
-    > No AI required — pure system design innovation
 
 
 

@@ -108,10 +108,74 @@ npm run dev
 
 ---
 
+## Recent Enhancements (Latest)
+
+### Sub-Host Role System
+- **Multiple Sub-Hosts**: Host can assign multiple Sub-Hosts with hierarchical ranking (primary + backup roles)
+- **Automatic Promotion**: Sub-Host automatically promoted to Host if Host leaves and doesn't return within 5 minutes
+- **UI Indicators**: Clear visual indication of Host and Sub-Hosts with their respective roles
+- **Revocable Status**: Host can revoke Sub-Host status at any time
+- **Session Continuity**: Ensures the session remains managed even if the original Host leaves
+
+### Enhanced Profanity Detection
+- **Improved Mute Duration**: Increased from 500ms to 1200ms max with intelligent word-count scaling
+- **Better Logging**: Comprehensive detection logs with timestamps, word counts, and mute durations
+- **Server Verification**: Enhanced server-side validation with confidence levels and false-positive detection
+- **Word-Level Precision**: Improved word timing extraction for more accurate muting
+
+### Professional Kick/Ban Messages
+- **Host Kicks**: `"You have been removed by the Host ({hostAlias}) for moderation reasons."`
+- **Vote-Kicks**: `"You were vote-kicked by participants ({votes}/{required} votes)."`
+- **Profanity Auto-Kicks**: `"Removed after 3 profanity warnings."`
+- **Broadcast Details**: Room receives context about removals via `user-kicked` event
+
+---
+
+## Known Limitations & Planned Enhancements
+
+### Current Limitations
+
+#### Profanity Detection
+- **Speech Recognition Delays**: Browser speech recognition may not transcribe words accurately, especially for slang, accents, or fast speech.
+- **Mute Timing**: Audio may pass through briefly due to processing delay before muting takes effect.
+- **AudioWorklet Delay**: The worklet only mutes after receiving a message from the main thread, introducing latency.
+- **Detection Accuracy**: Current regex-based detection may miss variations or unexpected character combinations.
+
+#### Host Role Management
+- **No Host Transfer**: If the Host leaves, there is currently no auto-assignment of a new Host, potentially leaving the room unmanaged.
+
+### Planned Enhancements
+
+#### Sub-Host Role (✅ Implemented)
+- ✅ Implement a **Sub-Host** role that can be assigned by the Host
+- ✅ Add UI button for Host to assign/revoke Sub-Host status
+- ✅ Support **multiple Sub-Hosts** with ranking for backup hierarchy
+- ✅ Automatic promotion: Sub-Host becomes Host if Host leaves (with 5-minute timeout)
+- ✅ Clear UI indication of Host and Sub-Hosts with their roles
+- ✅ Enable Host to revoke Sub-Host status at any time
+- ✅ Add timeout mechanism before automatic promotion
+
+#### Enhanced Profanity Detection
+- ✅ Improved mute duration calculation (up to 1200ms)
+- ✅ Enhanced logging for debugging
+- ✅ Better server verification
+- [ ] Consider integrating TensorFlow.js toxicity model for more robust detection
+- [ ] Add language and accent support improvements
+- [ ] Implement pre-muting before detected words when possible
+
+#### User Experience Improvements
+- ✅ Professional kick/ban notification messages
+- ✅ Detailed logging for transcript analysis
+- [ ] Add testing utilities for profanity detection validation
+- [ ] Improve error messaging clarity
+
+---
+
 ## Documentation
 
 - **Project_Info.txt**: Architecture and data flows.
 - **Future Upgrades AI.txt**: AI feature roadmap.
+- **AI_Recommendations.txt**: Prioritized feature recommendations.
 - **Viva_Questions.txt**: Viva preparation Q&A.
 
 ---

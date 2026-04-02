@@ -1,5 +1,5 @@
 const BLOCKED_WORDS = [
-  'fuck', 'shit', 'bitch', 'ass', 'asshole', 'bastard', 'damn',
+  'fuck', 'shit', 'bitch', 'ass', 'asshole', 'bastard',
   'dick', 'pussy', 'cunt', 'slut', 'whore', 'fag', 'nigger',
   'nigga', 'retard', 'rape', 'molest', 'porn', 'sex',
 ];

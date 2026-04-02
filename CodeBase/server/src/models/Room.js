@@ -11,6 +11,16 @@ const RoomSchema = new mongoose.Schema({
   rejoinAllowed: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   isActive: { type: Boolean, default: true },
+  hostId: { type: String, default: null }, // socketId of Host
+  subHosts: [
+    {
+      socketId: String,
+      alias: String,
+      rank: { type: Number, default: 0 }, // 0 = primary sub-host, 1+ = backup
+      assignedAt: Date,
+      hostReturnTimeout: { type: Number, default: 300000 } // 5 minutes default
+    }
+  ],
   participants: [
     {
       userId: String,

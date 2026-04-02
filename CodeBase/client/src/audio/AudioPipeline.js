@@ -86,7 +86,15 @@ export class AudioPipeline {
           // Trigger client-side mute with word-level precision
           this._triggerMutePrecise(cleanedTranscript);
           this.onProfanityDetected?.(cleanedTranscript);
-          console.log('AudioPipeline: Profanity detected (client):', cleanedTranscript);
+          
+          // Enhanced logging
+          console.log('=== PROFANITY DETECTION ===');
+          console.log('Transcript:', cleanedTranscript);
+          console.log('Is Final:', isFinal);
+          console.log('Time:', new Date().toISOString());
+          console.log('Mute Duration (ms):', this._calculateMuteDuration(cleanedTranscript));
+          console.log('Word Count:', cleanedTranscript.trim().split(/\s+/).length);
+          console.log('========================');
           
           // Send to server for hybrid moderation verification
           if (this.socket) {
@@ -135,18 +143,22 @@ export class AudioPipeline {
   _triggerMutePrecise(transcript) {
     // Estimate mute duration based on word length and typical speech rate
     // Average speech rate: 150 words per minute = 2.5 words per second = 400ms per word
-    const wordCount = transcript.trim().split(/\s+/).length;
-    const estimatedDurationMs = Math.max(300, Math.min(800, wordCount * 250));
+    const duration = this._calculateMuteDuration(transcript);
     
     if (this.workletNode) {
       // Use enhanced mute message with word-level precision
       this.workletNode.port.postMessage({ 
         type: 'mute', 
-        durationMs: estimatedDurationMs,
-        wordCount: wordCount,
+        durationMs: duration,
+        wordCount: transcript.trim().split(/\s+/).length,
         precisionMode: true // indicates word-level timing
       });
     }
+  }
+
+  _calculateMuteDuration(transcript) {
+    const wordCount = transcript.trim().split(/\s+/).length;
+    return Math.max(500, Math.min(1200, wordCount * 300)); // Increased from 800ms max to 1200ms
   }
 
   // Extract word timings for word-level precision
@@ -179,6 +191,12 @@ export class AudioPipeline {
   _sendToServerModeration(transcript) {
     if (!this.socket) return;
     
+    console.log('Sending to server for moderation verification:', {
+      transcript,
+      timestamp: new Date().toISOString(),
+      wordCount: transcript.trim().split(/\s+/).length
+    });
+    
     // Emit to server for moderation verification
     this.socket.emit('check-profanity-server', {
       transcript,
@@ -188,18 +206,26 @@ export class AudioPipeline {
     }, (response) => {
       // Handle server response
       if (response && response.isProfane) {
-        console.log('AudioPipeline: Server confirmed profanity:', response.badWords);
+        console.log('✓ Server confirmed profanity:', {
+          badWords: response.badWords,
+          confidence: response.confidence,
+          actions: 'Warning issued'
+        });
         this.onServerModerationResult?.({
           confirmed: true,
           badWords: response.badWords,
           confidence: response.confidence
         });
       } else if (response && !response.isProfane) {
-        console.log('AudioPipeline: Server disputed client detection - false positive');
+        console.log('⚠ Server disputed client detection - possible false positive:', {
+          transcript,
+          confidence: response.confidence,
+          action: 'Mute still applied (precautionary)'
+        });
         // Server says it's not profane - could trigger recovery
         this.onServerModerationResult?.({
           confirmed: false,
-          reason: 'Server validation failed',
+          reason: 'Server validation failed - false positive',
           confidence: response.confidence
         });
       }
