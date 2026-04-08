@@ -16,7 +16,7 @@ function VoiceRoom() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const alias = location.state?.alias || 'Anonymous';
+  const alias = location.state?.alias || 'Guest';
   const roomData = location.state?.room || {};
   const maxUsers = roomData.maxUsers || 10;
 
@@ -38,6 +38,11 @@ function VoiceRoom() {
   const [warningCount, setWarningCount] = useState(0);
   const [warningToast, setWarningToast] = useState(null);
   const [toastType, setToastType] = useState('warning'); // 'warning', 'kick', 'info'
+
+  // Sub-Host state
+  const [isHost, setIsHost] = useState(false);
+  const [subHosts, setSubHosts] = useState([]);
+  const [subHostToAssign, setSubHostToAssign] = useState(null);
 
   // Vote-kick state
   const [voteKick, setVoteKick] = useState(null);
@@ -216,10 +221,9 @@ function VoiceRoom() {
         setParticipants(usersList);
       });
 
-      // New user joined → initiate offer
+      // New user joined → initiate offer (no need to update state, room-users event will handle it)
       socket.on('user-joined', async ({ socketId, alias: newAlias }) => {
         if (!active) return;
-        setParticipants(prev => [...prev, { socketId, alias: newAlias }]);
         const pc = createPeerConnection(socketId);
         try {
           const offer = await pc.createOffer();
@@ -315,6 +319,58 @@ function VoiceRoom() {
         setToastType('warning');
         setTimeout(() => setWarningToast(null), 3000);
       });
+
+      // Room metadata including Host and Sub-Host info
+      socket.on('room-metadata', ({ isHost: hostStatus, subHosts: subHostList }) => {
+        if (!active) return;
+        setIsHost(hostStatus);
+        setSubHosts(subHostList || []);
+      });
+
+      // Sub-Host assigned
+      socket.on('sub-host-assigned', ({ targetSocketId, subHostAlias, rank }) => {
+        if (!active) return;
+        setSubHosts(prev => [...prev, { socketId: targetSocketId, alias: subHostAlias, rank }].sort((a, b) => a.rank - b.rank));
+        setWarningToast(`${subHostAlias} is now a Sub-Host!`);
+        setToastType('info');
+        setTimeout(() => setWarningToast(null), 3000);
+      });
+
+      // Sub-Host revoked
+      socket.on('sub-host-revoked', ({ targetSocketId, formerSubHostAlias }) => {
+        if (!active) return;
+        setSubHosts(prev => prev.filter(s => s.socketId !== targetSocketId));
+        setWarningToast(`${formerSubHostAlias}'s Sub-Host status revoked.`);
+        setToastType('info');
+        setTimeout(() => setWarningToast(null), 3000);
+      });
+
+      // Sub-Host promoted to Host
+      socket.on('sub-host-promoted', ({ newHostAlias }) => {
+        if (!active) return;
+        setIsHost(false);
+        setSubHosts(prev => prev.filter(s => s.alias !== newHostAlias));
+        setWarningToast(`${newHostAlias} promoted to Host!`);
+        setToastType('info');
+        setTimeout(() => setWarningToast(null), 3000);
+      });
+
+      // Host left and Sub-Host auto-promoted (automatic after timeout)
+      socket.on('host-promoted', ({ newHostAlias, subHosts }) => {
+        if (!active) return;
+        // Update current user's Host status if they're the one being promoted
+        if (alias === newHostAlias) {
+          setIsHost(true);
+          setSubHosts(subHosts || []);
+          setWarningToast(`You are now the Host!`);
+        } else {
+          // Update UI to show new Host and remaining Sub-Hosts
+          setSubHosts(subHosts || []);
+          setWarningToast(`${newHostAlias} is now the Host!`);
+        }
+        setToastType('info');
+        setTimeout(() => setWarningToast(null), 3000);
+      });
     };
 
     init();
@@ -342,6 +398,11 @@ function VoiceRoom() {
       socketRef.current?.off('vote-kick-update');
       socketRef.current?.off('vote-kick-ended');
       socketRef.current?.off('vote-kick-error');
+      socketRef.current?.off('room-metadata');
+      socketRef.current?.off('sub-host-assigned');
+      socketRef.current?.off('sub-host-revoked');
+      socketRef.current?.off('sub-host-promoted');
+      socketRef.current?.off('host-promoted');
     };
   }, [roomId, alias, createPeerConnection, navigate]);
 
@@ -394,8 +455,29 @@ function VoiceRoom() {
     setHasVoted(true);
   };
 
+  const handleAssignSubHost = (socketId, participantAlias, rank = 0) => {
+    socketRef.current?.emit('assign-sub-host', { roomId, targetSocketId: socketId, targetAlias: participantAlias, rank });
+    setSubHostToAssign(null);
+  };
+
+  const handleRevokeSubHost = (socketId) => {
+    const subHost = subHosts.find(s => s.socketId === socketId);
+    if (subHost) {
+      socketRef.current?.emit('revoke-sub-host', { roomId, targetSocketId: socketId, targetAlias: subHost.alias });
+    }
+  };
+
+  const handlePromoteSubHost = (socketId) => {
+    const subHost = subHosts.find(s => s.socketId === socketId);
+    if (subHost) {
+      socketRef.current?.emit('promote-sub-host', { roomId, targetSocketId: socketId, targetAlias: subHost.alias });
+    }
+  };
+
+  // Build participant list: self + remote participants (exclude self from server list)
+  const remoteParticipants = participants.filter(p => p.alias !== alias);
   const self = { socketId: 'self', alias, isSelf: true };
-  const allParticipants = [self, ...participants];
+  const allParticipants = [self, ...remoteParticipants];
 
   return (
     <section className="page-section">
@@ -439,12 +521,12 @@ function VoiceRoom() {
       {/* Warning/Kick toast */}
       {warningToast && (
         <div style={{
-          background: toastType === 'kick' ? 'rgba(239,68,68,0.15)' : 'rgba(248,113,113,0.1)',
-          border: `1.5px solid ${toastType === 'kick' ? '#ef4444' : 'var(--warning)'}`,
+          background: toastType === 'kick' ? 'rgba(239,68,68,0.15)' : toastType === 'info' ? 'rgba(251,191,36,0.12)' : 'rgba(248,113,113,0.1)',
+          border: `1.5px solid ${toastType === 'kick' ? '#ef4444' : toastType === 'info' ? '#fbbf24' : 'var(--warning)'}`,
           borderRadius: '8px',
           padding: toastType === 'kick' ? '0.8rem 1.2rem' : '0.6rem 1rem',
           marginBottom: '1rem',
-          color: toastType === 'kick' ? '#ef4444' : 'var(--warning)',
+          color: toastType === 'kick' ? '#ef4444' : toastType === 'info' ? '#fbbf24' : 'var(--warning)',
           fontSize: toastType === 'kick' ? '0.95rem' : '0.85rem',
           fontWeight: toastType === 'kick' ? 700 : 600,
           animation: 'fadeIn 0.3s ease',
@@ -457,6 +539,11 @@ function VoiceRoom() {
               <circle cx="12" cy="12" r="10"/>
               <line x1="15" y1="9" x2="9" y2="15"/>
               <line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+          )}
+          {toastType === 'info' && (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 7v5"/><path d="M12 17h.01"/>
             </svg>
           )}
           {warningToast}
@@ -534,13 +621,16 @@ function VoiceRoom() {
                 </div>
                 <div style={{ marginTop: '0.6rem', fontSize: '0.8rem', color: isSpeaking ? 'var(--speaking)' : 'var(--text-tertiary)', fontWeight: 600, marginBottom: '0.4rem' }}>
                   {p.alias}{p.isSelf ? ' (you)' : ''}
-                  {p.alias === 'Host' && !p.isSelf && (
+                  {isHost && p.isSelf && (
                     <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--speaking)', opacity: 0.7, marginTop: '0.1rem' }}>Host</span>
+                  )}
+                  {subHosts.some(s => s.socketId === p.socketId) && (
+                    <span style={{ display: 'block', fontSize: '0.65rem', color: '#fbbf24', opacity: 0.9, marginTop: '0.1rem' }}>⭐ Sub-Host</span>
                   )}
                 </div>
                 {showManage && !p.isSelf && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                    {alias === 'Host' && (
+                    {isHost && (
                       <button
                         onClick={() => handleKick(p.socketId)}
                         style={{ fontSize: '0.7rem', padding: '0.3rem 0.6rem', background: 'rgba(248,113,113,0.2)', border: '1px solid rgba(248,113,113,0.4)', color: '#F87171', borderRadius: '4px', cursor: 'pointer', width: '100%', fontWeight: 600 }}
@@ -550,7 +640,7 @@ function VoiceRoom() {
                         Kick
                       </button>
                     )}
-                    {alias !== 'Host' && (
+                    {!isHost && (
                       <button
                         disabled
                         style={{ fontSize: '0.7rem', padding: '0.3rem 0.6rem', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.1)', color: '#aaa', borderRadius: '4px', cursor: 'not-allowed', width: '100%', fontWeight: 600 }}
@@ -567,6 +657,29 @@ function VoiceRoom() {
                     >
                       Vote Kick
                     </button>
+                    {isHost && (
+                      <>
+                        {subHosts.some(s => s.socketId === p.socketId) ? (
+                          <button
+                            onClick={() => handleRevokeSubHost(p.socketId)}
+                            style={{ fontSize: '0.7rem', padding: '0.3rem 0.6rem', background: 'rgba(251, 191, 36, 0.2)', border: '1px solid rgba(251, 191, 36, 0.4)', color: '#fbbf24', borderRadius: '4px', cursor: 'pointer', width: '100%', fontWeight: 600 }}
+                            onMouseEnter={(e) => { e.target.style.background = '#fbbf24'; e.target.style.color = '#000'; }}
+                            onMouseLeave={(e) => { e.target.style.background = 'rgba(251, 191, 36, 0.2)'; e.target.style.color = '#fbbf24'; }}
+                          >
+                            Revoke Sub-Host
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleAssignSubHost(p.socketId, p.alias, subHosts.length)}
+                            style={{ fontSize: '0.7rem', padding: '0.3rem 0.6rem', background: 'rgba(251, 191, 36, 0.15)', border: '1px solid rgba(251, 191, 36, 0.3)', color: '#fbbf24', borderRadius: '4px', cursor: 'pointer', width: '100%', fontWeight: 600 }}
+                            onMouseEnter={(e) => { e.target.style.background = 'rgba(251, 191, 36, 0.25)'; }}
+                            onMouseLeave={(e) => { e.target.style.background = 'rgba(251, 191, 36, 0.15)'; }}
+                          >
+                            Make Sub-Host
+                          </button>
+                        )}
+                      </>
+                    )}
                   </div>
                 )}
               </div>

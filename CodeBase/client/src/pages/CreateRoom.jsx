@@ -4,6 +4,7 @@ import './shared.css';
 import { createRoom } from '../services/api';
 
 const categories = ['General', 'Study', 'Debate', 'Feedback', 'Chill', 'Custom'];
+const RANDOM_ALIASES = ['Echo', 'Wave', 'Drift', 'Haze', 'Pulse', 'Nova', 'Storm', 'Blaze', 'Frost', 'Sonic'];
 
 function CreateRoom() {
   const [topic, setTopic] = useState('');
@@ -26,11 +27,22 @@ function CreateRoom() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    
+    // Validate topic
+    const trimmedTopic = topic.trim();
+    if (!trimmedTopic) {
+      setError('Please enter a room topic.');
+      setLoading(false);
+      return;
+    }
+    
     const finalCategory = category === 'Custom' ? customCategory.trim() : category;
     if (!finalCategory) { setError('Please enter a custom category.'); setLoading(false); return; }
     try {
-      const room = await createRoom({ topic, category: finalCategory, maxUsers, isPrivate });
-      navigate(`/room/${room._id}`, { state: { alias: 'Host', room } });
+      const room = await createRoom({ topic: trimmedTopic, category: finalCategory, maxUsers, isPrivate });
+      // Generate random alias instead of hardcoding 'Host'
+      const randomAlias = RANDOM_ALIASES[Math.floor(Math.random() * RANDOM_ALIASES.length)];
+      navigate(`/room/${room._id}`, { state: { alias: randomAlias, room } });
     } catch (err) {
       setError(err.message);
       setLoading(false);

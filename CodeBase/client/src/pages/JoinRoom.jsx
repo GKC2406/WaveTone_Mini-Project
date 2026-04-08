@@ -31,7 +31,17 @@ function JoinRoom() {
   const isFull = room && activeCount >= room.maxUsers;
 
   const handleJoin = () => {
-    const resolvedAlias = alias.trim() || RANDOM_ALIASES[Math.floor(Math.random() * RANDOM_ALIASES.length)];
+    const trimmedAlias = alias.trim();
+    const resolvedAlias = trimmedAlias || RANDOM_ALIASES[Math.floor(Math.random() * RANDOM_ALIASES.length)];
+    
+    // Prevent users from trying to claim Host status (server will override anyway, but let's validate client-side)
+    if (trimmedAlias.toLowerCase() === 'host') {
+      // Silently convert to random alias instead of showing error
+      const randomAlias = RANDOM_ALIASES[Math.floor(Math.random() * RANDOM_ALIASES.length)];
+      navigate(`/room/${roomId}`, { state: { alias: randomAlias, room } });
+      return;
+    }
+    
     navigate(`/room/${roomId}`, { state: { alias: resolvedAlias, room } });
   };
 
