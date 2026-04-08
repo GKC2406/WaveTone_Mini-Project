@@ -87,12 +87,20 @@ function _banAndKick(socket, roomId, reason, isGlobalBan = false) {
 }
 
 function _promoteSubHostToHost(roomId) {
-  if (!roomSubHosts.has(roomId)) return;
+  console.log(`[DEBUG] _promoteSubHostToHost called for room ${roomId}`);
+  console.log(`[DEBUG] roomSubHosts.has(${roomId}): ${roomSubHosts.has(roomId)}`);
+  
+  if (!roomSubHosts.has(roomId)) {
+    console.log(`[DEBUG] No sub-hosts map for room ${roomId}, returning`);
+    return;
+  }
   const subHosts = roomSubHosts.get(roomId);
+  console.log(`[DEBUG] Sub-Hosts in room ${roomId}:`, subHosts);
   
   if (subHosts.length > 0) {
     // Promote highest-ranking (lowest index) sub-host
     const newHost = subHosts[0];
+    console.log(`[DEBUG] Promoting ${newHost.alias} to Host in room ${roomId}`);
     roomHosts.set(roomId, { socketId: newHost.socketId, alias: newHost.alias });
     subHosts.shift(); // Remove from sub-hosts list
     
@@ -103,6 +111,8 @@ function _promoteSubHostToHost(roomId) {
     });
     
     console.log(`Sub-Host ${newHost.alias} promoted to Host in room ${roomId}`);
+  } else {
+    console.log(`[DEBUG] No sub-hosts available for promotion in room ${roomId}`);
   }
 }
 
@@ -148,11 +158,16 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // Assign 'Host' only to the first participant, others get their alias or 'Anonymous'
+    // Assign first participant as Host, but keep their alias
     let cleanAlias;
     let isHost = false;
     if (participants.length === 0) {
-      cleanAlias = 'Host';
+      // First participant is Host, but keep their alias instead of renaming to 'Host'
+      let userAlias = alias ? alias.trim() : 'Guest';
+      if (userAlias.toLowerCase() === 'host') {
+        userAlias = 'Guest';
+      }
+      cleanAlias = containsProfanity(userAlias) ? filterProfanity(userAlias) : userAlias;
       isHost = true;
       roomHosts.set(roomId, { socketId: socket.id, alias: cleanAlias });
       if (hostTimeoutHandles.has(roomId)) {
@@ -160,12 +175,25 @@ io.on('connection', (socket) => {
         hostTimeoutHandles.delete(roomId);
       }
     } else {
-      cleanAlias = alias && alias !== 'Host' ? (containsProfanity(alias) ? filterProfanity(alias) : alias) : 'Anonymous';
+      // Validate alias: reject 'Host' claims and use provided alias
+      let userAlias = alias ? alias.trim() : 'Guest';
+      
+      // Prevent non-hosts from claiming Host status
+      if (userAlias.toLowerCase() === 'host') {
+        userAlias = 'Guest';
+      }
+      
+      // Check profanity on the provided alias
+      cleanAlias = containsProfanity(userAlias) ? filterProfanity(userAlias) : userAlias;
     }
 
     socket.join(roomId);
     socketAliases.set(socket.id, cleanAlias);
 
+    // Add new participant to the list BEFORE sending room-users
+    participants.push({ socketId: socket.id, alias: cleanAlias });
+    
+    // Send complete participant list to the new joiner (including themselves)
     socket.emit('room-users', participants);
     socket.emit('room-metadata', { 
       isHost, 
@@ -174,18 +202,14 @@ io.on('connection', (socket) => {
       hostReturnTimeout: HOST_RETURN_TIMEOUT_MS
     });
     
-    participants.push({ socketId: socket.id, alias: cleanAlias });
-    
-    // Broadcast for Browse page real-time updates
-    io.to(roomId).emit('room-users', {
-      roomId,
-      participants: participants.map(p => ({ 
-        socketId: p.socketId, 
-        alias: p.alias, 
-        joinedAt: p.joinedAt, 
-        leftAt: p.leftAt 
-      }))
-    });
+    // Broadcast updated participant list to all other users in the room
+    // (socket.to excludes the new joiner, they already got it above)
+    socket.to(roomId).emit('room-users', participants.map(p => ({ 
+      socketId: p.socketId, 
+      alias: p.alias, 
+      joinedAt: p.joinedAt, 
+      leftAt: p.leftAt 
+    })));
     
     socket.to(roomId).emit('user-joined', { 
       socketId: socket.id, 
@@ -226,6 +250,7 @@ io.on('connection', (socket) => {
 
     io.to(roomId).emit('sub-host-assigned', {
       hostAlias: host.alias,
+      targetSocketId: targetSocketId,
       subHostAlias: targetAlias,
       rank: rank,
       subHosts: subHosts
@@ -254,6 +279,43 @@ io.on('connection', (socket) => {
         subHosts: subHosts
       });
       console.log(`Sub-Host revoked: ${targetAlias} from room ${roomId}`);
+    }
+  });
+
+  // ==================== PROMOTE SUB-HOST TO HOST (Host only) ====================
+  socket.on('promote-sub-host', ({ roomId, targetSocketId, targetAlias }) => {
+    const host = roomHosts.get(roomId);
+    if (!host || host.socketId !== socket.id) {
+      socket.emit('error', { message: 'Only the Host can promote Sub-Hosts.' });
+      return;
+    }
+
+    if (!roomSubHosts.has(roomId)) return;
+    const subHosts = roomSubHosts.get(roomId);
+    
+    const index = subHosts.findIndex(s => s.socketId === targetSocketId);
+    if (index !== -1) {
+      const newHost = subHosts[index];
+      const formerHostAlias = host.alias;
+      
+      // Update Host
+      roomHosts.set(roomId, { socketId: newHost.socketId, alias: newHost.alias });
+      
+      // Remove from Sub-Hosts and add former Host to Sub-Hosts
+      subHosts.splice(index, 1);
+      subHosts.unshift({ 
+        socketId: socket.id, 
+        alias: formerHostAlias, 
+        rank: 0,
+        assignedAt: new Date()
+      });
+      
+      io.to(roomId).emit('sub-host-promoted', {
+        newHostAlias: newHost.alias,
+        formerHostAlias: formerHostAlias,
+        subHosts: subHosts
+      });
+      console.log(`Sub-Host ${newHost.alias} promoted to Host, ${formerHostAlias} demoted to Sub-Host in room ${roomId}`);
     }
   });
 
@@ -320,7 +382,7 @@ io.on('connection', (socket) => {
     if (record.count === WARNING_AUTO_VOTE_THRESHOLD) {
       const participants = roomParticipants.get(roomId);
       if (participants && participants.length >= 3) {
-        const targetAlias = socketAliases.get(socket.id) || 'Anonymous';
+        const targetAlias = socketAliases.get(socket.id) || 'User';
         const initiatorAlias = 'System';
         const totalVoters = participants.length - 1;
 
@@ -412,7 +474,7 @@ io.on('connection', (socket) => {
     const target = participants.find(p => p.socketId === targetSocketId);
     if (!target) return;
 
-    const initiatorAlias = socketAliases.get(socket.id) || 'Anonymous';
+    const initiatorAlias = socketAliases.get(socket.id) || 'User';
     const totalVoters = participants.length - 1; // exclude target
 
     const voteSession = {
@@ -539,11 +601,17 @@ function _leaveRoom(socket, roomId) {
       
       // Start timeout to allow Host to return before Sub-Host promotion
       const timeoutHandle = setTimeout(() => {
+        console.log(`[DEBUG] Host timeout fired for room ${roomId}. HOST_RETURN_TIMEOUT_MS: ${HOST_RETURN_TIMEOUT_MS}ms`);
         // Check if Host still hasn't returned
         const hostNow = roomHosts.get(roomId);
+        console.log(`[DEBUG] Current Host in room ${roomId}:`, hostNow);
+        console.log(`[DEBUG] Original Host socketId: ${host.socketId}`);
         if (!hostNow || hostNow.socketId === host.socketId) {
+          console.log(`[DEBUG] Host has not returned, promoting Sub-Host`);
           // Promote Sub-Host if available
           _promoteSubHostToHost(roomId);
+        } else {
+          console.log(`[DEBUG] Host has returned, no promotion needed`);
         }
         hostTimeoutHandles.delete(roomId);
       }, HOST_RETURN_TIMEOUT_MS);
@@ -588,15 +656,12 @@ function _leaveRoom(socket, roomId) {
       console.log(`Room ${roomId} closed — no participants remain`);
     } else {
       // Broadcast updated participant list for Browse page real-time updates
-      io.to(roomId).emit('room-users', {
-        roomId,
-        participants: participants.map(p => ({ 
-          socketId: p.socketId, 
-          alias: p.alias, 
-          joinedAt: p.joinedAt, 
-          leftAt: p.leftAt 
-        }))
-      });
+      io.to(roomId).emit('room-users', participants.map(p => ({ 
+        socketId: p.socketId, 
+        alias: p.alias, 
+        joinedAt: p.joinedAt, 
+        leftAt: p.leftAt 
+      })));
     }
   }
   socket.to(roomId).emit('user-left', { socketId: socket.id });
