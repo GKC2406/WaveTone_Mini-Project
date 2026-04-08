@@ -209,9 +209,11 @@ function VoiceRoom() {
         });
 
       // Current room users
-      socket.on('room-users', (users) => {
+      socket.on('room-users', (data) => {
         if (!active) return;
-        setParticipants(users);
+        // Handle both array format and object format from server
+        const usersList = Array.isArray(data) ? data : (data?.participants || []);
+        setParticipants(usersList);
       });
 
       // New user joined → initiate offer
