@@ -14,6 +14,7 @@ function CreateRoom() {
   const [isPrivate, setIsPrivate] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [customAlias, setCustomAlias] = useState('');
   const navigate = useNavigate();
   useEffect(() => {
     document.title = 'Create Room - WaveTone';
@@ -40,9 +41,12 @@ function CreateRoom() {
     if (!finalCategory) { setError('Please enter a custom category.'); setLoading(false); return; }
     try {
       const room = await createRoom({ topic: trimmedTopic, category: finalCategory, maxUsers, isPrivate });
-      // Generate random alias instead of hardcoding 'Host'
-      const randomAlias = RANDOM_ALIASES[Math.floor(Math.random() * RANDOM_ALIASES.length)];
-      navigate(`/room/${room._id}`, { state: { alias: randomAlias, room } });
+      // Use custom alias if provided, else random
+      let alias = customAlias.trim();
+      if (!alias) {
+        alias = RANDOM_ALIASES[Math.floor(Math.random() * RANDOM_ALIASES.length)];
+      }
+      navigate(`/room/${room._id}`, { state: { alias, room } });
     } catch (err) {
       setError(err.message);
       setLoading(false);
@@ -66,6 +70,21 @@ function CreateRoom() {
               onChange={(e) => setTopic(e.target.value)}
               required
             />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Your Alias (optional)</label>
+            <input
+              className="form-input"
+              type="text"
+              placeholder="e.g. DJNova, Host123, ..."
+              value={customAlias}
+              onChange={e => setCustomAlias(e.target.value.slice(0, 16))}
+              maxLength={16}
+            />
+            <span style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem', marginTop: '0.3rem', display: 'block' }}>
+              {customAlias.length}/16 characters
+            </span>
           </div>
 
           <div className="form-group">
