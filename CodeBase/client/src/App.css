@@ -387,22 +387,15 @@
   width: 100%;
   max-width: 1400px;
   min-height: calc(100vh - 120px);
-  background: var(--surface);
-  border-radius: 16px;
-  box-shadow: 0 4px 40px rgba(0, 0, 0, 0.2);
-  border: 1.5px solid var(--speaking);
+  background: transparent;
+  border-radius: 0;
   padding: 0;
-  transition: background 0.35s ease, border 0.35s ease, filter 0.35s ease, box-shadow 0.35s ease;
   overflow: hidden;
-  filter: drop-shadow(0 8px 32px rgba(56, 189, 248, 0.15));
-  box-shadow: 0 0 30px rgba(56, 189, 248, 0.12), inset 0 0 30px rgba(56, 189, 248, 0.03);
 }
 
-/* Light theme drop shadow */
+/* Light theme - flat minimal design */
 [data-theme="light"] .page-box {
-  border: 1.5px solid rgba(10, 46, 80, 0.3);
-  filter: drop-shadow(0 8px 32px rgba(0, 212, 255, 0.08));
-  box-shadow: 0 0 30px rgba(10, 46, 80, 0.08), inset 0 0 30px rgba(10, 46, 80, 0.02);
+  /* No card styling */
 }
 
 /* ===== BUTTONS ===== */
@@ -506,7 +499,7 @@
     padding: 0.8rem 0.5rem 1.5rem 0.5rem;
   }
   .page-box {
-    border-radius: 12px;
+    /* Mobile: flat layout */
   }
 }
 

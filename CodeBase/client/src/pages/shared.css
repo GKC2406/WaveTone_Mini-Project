@@ -218,32 +218,36 @@
 .card {
   background: var(--bg);
   border: 1px solid var(--card-border);
-  border-radius: 14px;
+  border-radius: 12px;
   padding: 1.5rem;
-  transition: all 0.25s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
 .card:hover {
   border-color: rgba(56, 189, 248, 0.2);
-  box-shadow: 0 4px 20px rgba(56, 189, 248, 0.05);
+  box-shadow: 0 8px 24px rgba(56, 189, 248, 0.1);
+  transform: translateY(-2px);
 }
 
 /* Dark theme card */
 [data-theme="dark"] .card {
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
+
 [data-theme="dark"] .card:hover {
-  box-shadow: 0 8px 32px rgba(56, 189, 248, 0.15);
+  box-shadow: 0 8px 24px rgba(56, 189, 248, 0.15);
 }
 
 /* Light theme card */
 [data-theme="light"] .card {
   background: #ffffff;
-  border: 1.5px solid rgba(10, 46, 80, 0.15);
-  box-shadow: 0 2px 12px rgba(10, 46, 80, 0.08);
+  border: 1.5px solid rgba(10, 46, 80, 0.1);
+  box-shadow: 0 1px 8px rgba(10, 46, 80, 0.05);
 }
+
 [data-theme="light"] .card:hover {
-  border-color: rgba(10, 46, 80, 0.3);
-  box-shadow: 0 8px 28px rgba(10, 46, 80, 0.12);
+  border-color: rgba(10, 46, 80, 0.2);
+  box-shadow: 0 8px 24px rgba(10, 46, 80, 0.1);
   transform: translateY(-2px);
 }
 
@@ -251,29 +255,33 @@
 .form-group {
   margin-bottom: 1.3rem;
 }
+
 .form-label {
   display: block;
   color: var(--text-secondary);
-  font-size: 0.88rem;
-  font-weight: 600;
-  margin-bottom: 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
 }
+
 .form-input, .form-select, .form-textarea {
   width: 100%;
-  padding: 0.7rem 1rem;
+  padding: 0.75rem 1rem;
   font-size: 0.95rem;
   background: var(--bg);
   border: 1.5px solid var(--card-border);
   border-radius: 10px;
   color: var(--text-primary);
   outline: none;
-  transition: border 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.2s ease;
 }
+
 .form-input:focus, .form-select:focus, .form-textarea:focus {
   border-color: var(--speaking);
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+  background: rgba(56, 189, 248, 0.02);
 }
 .form-input::placeholder, .form-textarea::placeholder {
   color: var(--text-tertiary);
@@ -481,7 +489,7 @@
   flex-shrink: 0;
 }
 
-/* Participant circle */
+/* Participant circle with better accessibility */
 .participant-avatar {
   width: 56px;
   height: 56px;
@@ -494,14 +502,16 @@
   font-size: 1.1rem;
   color: var(--text-primary);
   border: 2px solid transparent;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
 }
+
 .participant-avatar.speaking {
   border-color: var(--speaking);
-  background: rgba(56,189,248,0.08);
+  background: rgba(56, 189, 248, 0.12);
   color: var(--speaking);
-  box-shadow: none;
-  animation: speaking-pulse-once 0.5s cubic-bezier(0.4,0,0.2,1) 1;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.3);
+  animation: speaking-pulse-once 0.5s cubic-bezier(0.4, 0, 0.2, 1) 1;
 }
 
 /* Light theme participant avatar */
@@ -528,23 +538,24 @@
 }
 
 
-/* Control button */
+/* Control button with better feedback */
 .control-btn {
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  border: none;
+  border: 1.5px solid rgba(56, 189, 248, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.35s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: var(--card-border);
   color: var(--text-primary);
   position: relative;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
+
 .control-btn::before {
   content: '';
   position: absolute;
@@ -558,33 +569,42 @@
   transition: all 0.2s ease;
   z-index: 0;
 }
+
 .control-btn:active::before {
   width: 100px;
   height: 100px;
 }
+
 .control-btn > * {
   position: relative;
   z-index: 1;
 }
+
 .control-btn:hover {
   background: var(--text-tertiary);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
+
 .control-btn.danger {
   background: rgba(248, 113, 113, 0.15);
+  border-color: rgba(248, 113, 113, 0.3);
   color: var(--warning);
 }
+
 .control-btn.danger:hover {
   background: var(--warning);
+  border-color: var(--warning);
   color: #fff;
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(248, 113, 113, 0.3);
+  box-shadow: 0 4px 16px rgba(248, 113, 113, 0.4);
 }
+
 .control-btn.active {
   background: var(--speaking);
+  border-color: var(--speaking);
   color: #fff;
-  box-shadow: 0 0 16px rgba(56, 189, 248, 0.3);
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
 }
 
 /* Light theme control button */

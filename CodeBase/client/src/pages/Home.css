@@ -1,9 +1,17 @@
 /* Feature card heading (h2) style for visual balance */
 .feature-card h2 {
   color: var(--text-primary);
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   font-weight: 700;
-  margin-bottom: 0.45rem;
+  margin-bottom: 0.6rem;
+  letter-spacing: 0.02em;
+}
+
+.feature-card p {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin: 0;
 }
 /* ===== HOME PAGE ===== */
 .home-page {
@@ -146,168 +154,117 @@
   100% { height: 12%; }
 }
 
-/* ===== DIVIDER ===== */
-.home-divider {
-  width: 50%;
-  display: flex;
-  justify-content: center;
-  margin: 1.5rem auto;
-  outline: 2px solid wheat;
-  animation: flowingOutline 2.5s linear infinite;
-}
-
-.home-divider::before {
-  content: "";
-  width: 100%;
-  height: 0px;
-  background: var(--card-border);
-}
-
-@keyframes flowingOutline {
-  0% {
-    outline-color: wheat;
-    box-shadow: inset 0 0 10px rgba(245, 222, 179, 0.3);
-  }
-  50% {
-    outline-color: rgba(245, 222, 179, 0.6);
-    box-shadow: inset 0 0 20px rgba(245, 222, 179, 0.5);
-  }
-  100% {
-    outline-color: wheat;
-    box-shadow: inset 0 0 10px rgba(245, 222, 179, 0.3);
-  }
-}
-
-@keyframes flowingOutlineLight {
-  0% {
-    outline-color: lightslategrey;
-    box-shadow: inset 0 0 10px rgba(119, 136, 153, 0.3);
-  }
-  50% {
-    outline-color: rgba(119, 136, 153, 0.6);
-    box-shadow: inset 0 0 20px rgba(119, 136, 153, 0.5);
-  }
-  100% {
-    outline-color: lightslategrey;
-    box-shadow: inset 0 0 10px rgba(119, 136, 153, 0.3);
-  }
-}
-
-/* Light theme divider */
-[data-theme="light"] .home-divider {
-  outline: 2px solid lightslategrey;
-  animation: flowingOutlineLight 2.5s linear infinite;
-}
-
-/* ===== FEATURES ===== */
+/* ===== FEATURES SECTION (VERTICAL MODERN) ===== */
 .home-features {
-  padding: 2.5rem 2rem 3rem 2rem;
-  border-top: 1px solid var(--card-border);
+  padding: 4rem 2rem;
+  background: transparent;
 }
 
 .features-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.3rem;
-  max-width: 960px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 900px;
   margin: 0 auto;
 }
 
+/* Vertical stacked layout with icon on left */
 .feature-card {
-  background: rgba(56, 189, 248, 0.05);
-  border: 1px solid rgba(56, 189, 248, 0.1);
-  border-radius: 14px;
-  padding: 2rem 1.5rem;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.1);
+  border-radius: 0;
+  padding: 2.5rem 0;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  will-change: transform;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 2rem;
+  text-align: left;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.feature-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, transparent 100%);
-  opacity: 0;
-  transition: opacity 0.4s ease;
-  pointer-events: none;
+
+.feature-card:last-child {
+  border-bottom: none;
 }
+
 .feature-card:hover {
-  background: rgba(56, 189, 248, 0.12);
-  border-color: rgba(56, 189, 248, 0.3);
-  transform: translateY(-6px);
-  box-shadow: 0 6px 18px rgba(56, 189, 248, 0.13);
-}
-.feature-card:hover::before {
-  opacity: 1;
-}
-
-/* Dark theme feature cards */
-[data-theme="dark"] .feature-card {
-  background: rgba(56, 189, 248, 0.05);
-  border: 1px solid rgba(56, 189, 248, 0.1);
-}
-
-/* Light theme feature cards */
-[data-theme="light"] .feature-card {
-  background: linear-gradient(135deg, #f0f6fc 0%, #ffffff 100%);
-  border: 1.5px solid rgba(10, 46, 80, 0.12);
-  box-shadow: 0 4px 24px 0 rgba(10, 46, 80, 0.10), 0 1.5px 6px 0 rgba(10, 46, 80, 0.07);
-  /* Subtle glow for light mode */
-}
-[data-theme="light"] .feature-card::before {
-  background: linear-gradient(135deg, rgba(10, 46, 80, 0.07) 0%, transparent 100%);
-}
-/* Light theme feature card hover */
- [data-theme="light"] .feature-card:hover {
-  background: linear-gradient(135deg, #e6f0f9 0%, #f9fbfd 100%);
-  border-color: rgba(10, 46, 80, 0.22);
-  box-shadow: 0 8px 32px 0 rgba(10, 46, 80, 0.16), 0 3px 12px 0 rgba(10, 46, 80, 0.10);
-  outline: 1px solid #222;
-  outline-offset: -3px;
-  transform: translateY(-6px);
-}
-
-[data-theme="light"] .feature-icon {
-  background: rgba(10, 46, 80, 0.08);
+  transform: translateX(4px);
 }
 
 .feature-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: rgba(56, 189, 248, 0.08);
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
+  border-radius: 0;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 1.2rem auto;
   position: relative;
   z-index: 1;
+  flex-shrink: 0;
 }
 
-.feature-card h3 {
+.feature-icon svg {
+  width: 40px;
+  height: 40px;
+  stroke-width: 2.2;
+}
+
+.feature-card h2 {
   color: var(--text-primary);
-  font-size: 1.05rem;
+  font-size: 1.3rem;
   font-weight: 700;
-  margin-bottom: 0.45rem;
+  margin: 0 0 0.5rem 0;
+  letter-spacing: -0.01em;
 }
 
-/* Default paragraph style */
 .feature-card p {
-  color: var(--text-tertiary);
-  font-size: 0.88rem;
-  line-height: 1.5;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0;
 }
-/* Light theme: improve contrast for feature card paragraphs */
+
+/* Light theme */
+[data-theme="light"] .feature-card {
+  border-bottom-color: rgba(10, 46, 80, 0.15);
+}
+
+[data-theme="light"] .feature-card h2 {
+  color: #0A2E50;
+}
+
 [data-theme="light"] .feature-card p {
-  color: #26334D;
+  color: #1E5A96;
+}
+
+/* Mobile: stack vertically with full-width content */
+@media (max-width: 600px) {
+  .feature-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 2rem 0;
+  }
+  
+  .feature-icon {
+    width: 56px;
+    height: 56px;
+  }
+  
+  .feature-icon svg {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .feature-card h2 {
+    font-size: 1.1rem;
+  }
+  
+  .feature-card p {
+    font-size: 0.9rem;
+  }
 }
 
 /* ===== RESPONSIVE ===== */
