@@ -69,7 +69,7 @@ function About() {
 
       <div className="card card--spaced">
         <h3 className="about-card-title about-card-title--with-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--speaking)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/><path d="M22 4 12 14.01l-3-3"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="mediumaquamarine" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/><path d="M22 4 12 14.01l-3-3"/></svg>
           Why WaveTone
         </h3>
         <div className="about-stats-grid">
@@ -95,7 +95,7 @@ function About() {
 
       <div className="card card--spaced">
         <h3 className="about-card-title about-card-title--with-icon about-card-title--spaced">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--speaking)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="mediumaquamarine" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
           How It Works
         </h3>
         <p className="about-steps-subtitle">

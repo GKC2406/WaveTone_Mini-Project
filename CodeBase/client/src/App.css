@@ -425,7 +425,7 @@
   color: #0A2E50;
   border-color: #0A2E50;
   box-shadow: 0 8px 32px rgba(10, 46, 80, 0.2), inset 0 0 20px rgba(56, 189, 248, 0.1);
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
 /* Light theme button */
@@ -438,7 +438,7 @@
   border-color: var(--speaking);
   color: var(--text-primary);
   background: rgba(56, 189, 248, 0.05);
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   z-index: 1;
 }
 

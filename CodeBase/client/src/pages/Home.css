@@ -191,7 +191,7 @@
 .home-features {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1px;
+  gap: 12px;
   overflow: hidden;
   margin-bottom: clamp(2rem, 5vw, 4rem);
   border: 1px solid var(--card-border);
@@ -235,6 +235,11 @@
   color: var(--text-secondary);
   font-size: 0.9rem;
   line-height: 1.65;
+}
+
+/* Add padding to .home-features in dark mode */
+[data-theme="dark"] .home-features {
+  padding: 0.2rem;
 }
 
 @media (max-width: 900px) {
